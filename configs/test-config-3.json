@@ -1,0 +1,42 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "created": "2025-07-29T14:16:28.965142",
+    "simulator_module": "Network Simulator v1.0"
+  },
+  "network": {
+    "name": "Config Management Test",
+    "totalPacketsProcessed": 0,
+    "totalConnections": 0
+  },
+  "statistics": {
+    "total_packets_sent": 0,
+    "delivered_packets": 0,
+    "dropped_packets_ttl": 0,
+    "blocked_by_firewall": 0,
+    "total_hops": 0,
+    "device_activity": {
+      "Test-Device": 0
+    },
+    "packet_paths": []
+  },
+  "devices": [
+    {
+      "name": "Test-Device",
+      "type": "host",
+      "status": "online",
+      "interfaces": [
+        {
+          "name": "eth0",
+          "ipAddress": "192.168.1.100",
+          "macAddress": "",
+          "status": "up",
+          "connectedTo": null,
+          "outgoing_queue": []
+        }
+      ],
+      "received_packets_history": []
+    }
+  ],
+  "connections": []
+}
