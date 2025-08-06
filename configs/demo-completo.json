@@ -1,0 +1,276 @@
+{
+  "network_name": "Red Completa con Todas las Funcionalidades",
+  "description": "Demo completo con firewall, VLANs, RIP y routing avanzado",
+  "devices": [
+    {
+      "name": "Router1",
+      "type": "router",
+      "interfaces": [
+        {
+          "name": "eth0",
+          "ip": "192.168.1.1",
+          "subnet": "255.255.255.0",
+          "status": "up"
+        },
+        {
+          "name": "eth1",
+          "ip": "10.0.0.1",
+          "subnet": "255.255.255.0",
+          "status": "up"
+        }
+      ],
+      "routing_table": {
+        "static_routes": [
+          {
+            "destination": "192.168.2.0",
+            "next_hop": "10.0.0.2",
+            "interface": "eth1",
+            "metric": 1,
+            "protocol": "static"
+          }
+        ],
+        "default_route": {
+          "next_hop": "10.0.0.2",
+          "interface": "eth1"
+        }
+      },
+      "rip_config": {
+        "enabled": true,
+        "version": 2,
+        "networks": ["192.168.1.0", "10.0.0.0"],
+        "interfaces": ["eth0", "eth1"]
+      }
+    },
+    {
+      "name": "Router2",
+      "type": "router",
+      "interfaces": [
+        {
+          "name": "eth0",
+          "ip": "10.0.0.2",
+          "subnet": "255.255.255.0",
+          "status": "up"
+        },
+        {
+          "name": "eth1",
+          "ip": "192.168.2.1",
+          "subnet": "255.255.255.0",
+          "status": "up"
+        }
+      ],
+      "routing_table": {
+        "static_routes": [
+          {
+            "destination": "192.168.1.0",
+            "next_hop": "10.0.0.1",
+            "interface": "eth0",
+            "metric": 1,
+            "protocol": "static"
+          }
+        ],
+        "default_route": {
+          "next_hop": "10.0.0.1",
+          "interface": "eth0"
+        }
+      },
+      "rip_config": {
+        "enabled": true,
+        "version": 2,
+        "networks": ["192.168.2.0", "10.0.0.0"],
+        "interfaces": ["eth0", "eth1"]
+      }
+    },
+    {
+      "name": "Switch1",
+      "type": "switch",
+      "interfaces": [
+        {
+          "name": "eth0",
+          "status": "up"
+        },
+        {
+          "name": "eth1",
+          "status": "up"
+        },
+        {
+          "name": "eth2",
+          "status": "up"
+        },
+        {
+          "name": "eth3",
+          "status": "up"
+        }
+      ],
+      "vlans": [
+        {
+          "id": 10,
+          "name": "ADMIN",
+          "description": "VLAN para administración"
+        },
+        {
+          "id": 20,
+          "name": "SALES",
+          "description": "VLAN para ventas"
+        },
+        {
+          "id": 30,
+          "name": "ENGINEERING",
+          "description": "VLAN para ingeniería"
+        }
+      ],
+      "vlan_interfaces": [
+        {
+          "interface": "eth0",
+          "mode": "access",
+          "vlan": 10
+        },
+        {
+          "interface": "eth1",
+          "mode": "access",
+          "vlan": 20
+        },
+        {
+          "interface": "eth2",
+          "mode": "access",
+          "vlan": 30
+        },
+        {
+          "interface": "eth3",
+          "mode": "trunk",
+          "allowed_vlans": [10, 20, 30],
+          "native_vlan": 1
+        }
+      ]
+    },
+    {
+      "name": "Firewall1",
+      "type": "firewall",
+      "interfaces": [
+        {
+          "name": "eth0",
+          "ip": "192.168.1.10",
+          "subnet": "255.255.255.0",
+          "status": "up"
+        },
+        {
+          "name": "eth1",
+          "ip": "192.168.3.1",
+          "subnet": "255.255.255.0",
+          "status": "up"
+        }
+      ],
+      "firewall_rules": {
+        "acls": [
+          {
+            "name": "INBOUND",
+            "type": "extended",
+            "rules": [
+              {
+                "action": "permit",
+                "protocol": "ip",
+                "source": "192.168.1.0",
+                "source_wildcard": "0.0.0.255",
+                "destination": "any",
+                "destination_wildcard": "0.0.0.0",
+                "description": "Permitir tráfico interno"
+              },
+              {
+                "action": "deny",
+                "protocol": "tcp",
+                "source": "any",
+                "source_wildcard": "0.0.0.0",
+                "destination": "192.168.3.0",
+                "destination_wildcard": "0.0.0.255",
+                "description": "Bloquear acceso a red interna"
+              }
+            ]
+          },
+          {
+            "name": "OUTBOUND",
+            "type": "extended",
+            "rules": [
+              {
+                "action": "permit",
+                "protocol": "ip",
+                "source": "192.168.3.0",
+                "source_wildcard": "0.0.0.255",
+                "destination": "any",
+                "destination_wildcard": "0.0.0.0",
+                "description": "Permitir salida a internet"
+              }
+            ]
+          }
+        ],
+        "active_acls": ["INBOUND", "OUTBOUND"]
+      }
+    },
+    {
+      "name": "Host1",
+      "type": "host",
+      "interfaces": [
+        {
+          "name": "eth0",
+          "ip": "192.168.1.100",
+          "subnet": "255.255.255.0",
+          "status": "up"
+        }
+      ]
+    },
+    {
+      "name": "Host2",
+      "type": "host",
+      "interfaces": [
+        {
+          "name": "eth0",
+          "ip": "192.168.2.100",
+          "subnet": "255.255.255.0",
+          "status": "up"
+        }
+      ]
+    },
+    {
+      "name": "Host3",
+      "type": "host",
+      "interfaces": [
+        {
+          "name": "eth0",
+          "ip": "192.168.3.100",
+          "subnet": "255.255.255.0",
+          "status": "up"
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "device1": "Router1",
+      "interface1": "eth0",
+      "device2": "Switch1",
+      "interface2": "eth3"
+    },
+    {
+      "device1": "Router1",
+      "interface1": "eth1",
+      "device2": "Router2",
+      "interface2": "eth0"
+    },
+    {
+      "device1": "Router2",
+      "interface1": "eth1",
+      "device2": "Firewall1",
+      "interface2": "eth0"
+    },
+    {
+      "device1": "Switch1",
+      "interface1": "eth0",
+      "device2": "Host1",
+      "interface2": "eth0"
+    },
+    {
+      "device1": "Firewall1",
+      "interface1": "eth1",
+      "device2": "Host3",
+      "interface2": "eth0"
+    }
+  ]
+} 

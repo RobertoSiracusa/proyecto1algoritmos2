@@ -86,6 +86,31 @@ class CLIParser:
         self.command_registry.register(DefaultRouteCommand())
         self.command_registry.register(ClearRoutesCommand())
         self.command_registry.register(ShowRoutingTableCommand())
+        
+        # ===== NUEVO: Comandos de firewall =====
+        self.command_registry.register(CreateACLCommand())
+        self.command_registry.register(AddFirewallRuleCommand())
+        self.command_registry.register(ShowACLCommand())
+        self.command_registry.register(ActivateACLCommand())
+        self.command_registry.register(ShowSecurityLogCommand())
+        self.command_registry.register(ClearSecurityLogCommand())
+        
+        # ===== NUEVO: Comandos de VLAN =====
+        self.command_registry.register(CreateVLANCommand())
+        self.command_registry.register(DeleteVLANCommand())
+        self.command_registry.register(ConfigureInterfaceAccessCommand())
+        self.command_registry.register(ConfigureInterfaceTrunkCommand())
+        self.command_registry.register(ShowVLANsCommand())
+        self.command_registry.register(ShowVLANInterfacesCommand())
+        
+        # ===== NUEVO: Comandos de RIP =====
+        self.command_registry.register(EnableRIPCommand())
+        self.command_registry.register(DisableRIPCommand())
+        self.command_registry.register(AddRIPNetworkCommand())
+        self.command_registry.register(EnableRIPInterfaceCommand())
+        self.command_registry.register(ShowRIPDatabaseCommand())
+        self.command_registry.register(ShowRIPInterfacesCommand())
+        self.command_registry.register(ShowRIPNeighborsCommand())
     
     def parse_command(self, command_string: str) -> tuple:
         """

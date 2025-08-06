@@ -59,6 +59,34 @@ from .routing_commands import (
     ShowRoutingTableCommand
 )
 
+from .firewall_commands import (
+    CreateACLCommand,
+    AddFirewallRuleCommand,
+    ShowACLCommand,
+    ActivateACLCommand,
+    ShowSecurityLogCommand,
+    ClearSecurityLogCommand
+)
+
+from .vlan_commands import (
+    CreateVLANCommand,
+    DeleteVLANCommand,
+    ConfigureInterfaceAccessCommand,
+    ConfigureInterfaceTrunkCommand,
+    ShowVLANsCommand,
+    ShowVLANInterfacesCommand
+)
+
+from .rip_commands import (
+    EnableRIPCommand,
+    DisableRIPCommand,
+    AddRIPNetworkCommand,
+    EnableRIPInterfaceCommand,
+    ShowRIPDatabaseCommand,
+    ShowRIPInterfacesCommand,
+    ShowRIPNeighborsCommand
+)
+
 __all__ = [
     # Basic commands
     'HelpCommand',
@@ -104,5 +132,30 @@ __all__ = [
     'RemoveRouteCommand',
     'DefaultRouteCommand',
     'ClearRoutesCommand',
-    'ShowRoutingTableCommand'
+    'ShowRoutingTableCommand',
+    
+    # Firewall commands
+    'CreateACLCommand',
+    'AddFirewallRuleCommand',
+    'ShowACLCommand',
+    'ActivateACLCommand',
+    'ShowSecurityLogCommand',
+    'ClearSecurityLogCommand',
+    
+    # VLAN commands
+    'CreateVLANCommand',
+    'DeleteVLANCommand',
+    'ConfigureInterfaceAccessCommand',
+    'ConfigureInterfaceTrunkCommand',
+    'ShowVLANsCommand',
+    'ShowVLANInterfacesCommand',
+    
+    # RIP commands
+    'EnableRIPCommand',
+    'DisableRIPCommand',
+    'AddRIPNetworkCommand',
+    'EnableRIPInterfaceCommand',
+    'ShowRIPDatabaseCommand',
+    'ShowRIPInterfacesCommand',
+    'ShowRIPNeighborsCommand'
 ] 

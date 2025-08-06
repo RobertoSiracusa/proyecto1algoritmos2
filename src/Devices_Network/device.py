@@ -32,6 +32,9 @@ from DataEstructures.stack import Stack
 from DataEstructures.queue import Queue
 from .interface import Interface
 from .routing_table import RoutingTable
+from .firewall_rules import FirewallManager
+from .vlan_system import VLANManager
+from .rip_protocol import RIPProtocol
 
 # Importar validaciones si están disponibles
 try:
@@ -157,6 +160,21 @@ class Device:
         self.routing_table: Optional[RoutingTable] = None
         if self.type == "router":
             self.routing_table = RoutingTable()
+        
+        # === SISTEMA DE FIREWALL (solo para firewalls) ===
+        self.firewall_manager: Optional[FirewallManager] = None
+        if self.type == "firewall":
+            self.firewall_manager = FirewallManager()
+        
+        # === SISTEMA DE VLANs (solo para switches) ===
+        self.vlan_manager: Optional[VLANManager] = None
+        if self.type == "switch":
+            self.vlan_manager = VLANManager()
+        
+        # === PROTOCOLO RIP (solo para routers) ===
+        self.rip_protocol: Optional[RIPProtocol] = None
+        if self.type == "router":
+            self.rip_protocol = RIPProtocol(self.name)
         
         # === ATRIBUTOS PRIVADOS PARA ESTADÍSTICAS Y CONTROL ===
         import time
@@ -643,10 +661,19 @@ class Device:
     
     def _firewall_process_packet(self, packet: Any) -> bool:
         """Procesamiento específico para firewalls."""
-        # En una implementación completa, aquí iría:
-        # - Aplicar reglas de firewall
-        # - Logging de security events
-        # - Permitir/denegar según políticas
+        if not self.firewall_manager:
+            return True
+        
+        # Evaluar paquete contra reglas de firewall
+        permitted, matched_rule, acl_name = self.firewall_manager.evaluate_packet(packet)
+        
+        if not permitted:
+            print(f"🚫 Paquete {getattr(packet, 'id', 'unknown')} bloqueado por firewall {self.name}")
+            print(f"   Regla: {matched_rule.id if matched_rule else 'N/A'} en ACL: {acl_name}")
+            return False
+        
+        # Si está permitido, procesar normalmente
+        print(f"✅ Paquete {getattr(packet, 'id', 'unknown')} permitido por firewall {self.name}")
         return True
     
     def addPacketToOutgoingQueue(self, packet: Any) -> bool:
@@ -872,6 +899,18 @@ class Device:
         if self.type == "router" and self.routing_table:
             stats["routing"] = self.routing_table.get_statistics()
         
+        # Agregar estadísticas de firewall si es un firewall
+        if self.type == "firewall" and self.firewall_manager:
+            stats["firewall"] = self.firewall_manager.get_statistics()
+        
+        # Agregar estadísticas de VLANs si es un switch
+        if self.type == "switch" and self.vlan_manager:
+            stats["vlans"] = self.vlan_manager.get_statistics()
+        
+        # Agregar estadísticas de RIP si es un router
+        if self.type == "router" and self.rip_protocol:
+            stats["rip"] = self.rip_protocol.get_statistics()
+        
         return stats
     
     # === MÉTODOS DE ROUTING (solo para routers) ===
@@ -961,6 +1000,196 @@ class Device:
             return 0
         
         return self.routing_table.clear_routes(protocol)
+    
+    # === MÉTODOS DE FIREWALL (solo para firewalls) ===
+    
+    def create_acl(self, name: str, acl_type: str = "extended") -> bool:
+        """Crea una nueva ACL (solo para firewalls)."""
+        if self.type != "firewall" or not self.firewall_manager:
+            print(f"❌ Solo los firewalls pueden crear ACLs. {self.name} es un {self.type}")
+            return False
+        
+        return self.firewall_manager.create_acl(name, acl_type)
+    
+    def add_firewall_rule(self, acl_name: str, action: str, protocol: str, 
+                         source_ip: str, destination_ip: str, 
+                         source_wildcard: str = "0.0.0.0",
+                         destination_wildcard: str = "0.0.0.0",
+                         description: str = "") -> bool:
+        """Agrega una regla a una ACL (solo para firewalls)."""
+        if self.type != "firewall" or not self.firewall_manager:
+            print(f"❌ Solo los firewalls pueden agregar reglas. {self.name} es un {self.type}")
+            return False
+        
+        acl = self.firewall_manager.get_acl(acl_name)
+        if not acl:
+            print(f"❌ ACL '{acl_name}' no encontrada")
+            return False
+        
+        return acl.add_rule(action, protocol, source_ip, destination_ip, 
+                           source_wildcard, destination_wildcard, description=description)
+    
+    def show_acl(self, acl_name: str = None) -> str:
+        """Muestra las reglas de una ACL (solo para firewalls)."""
+        if self.type != "firewall" or not self.firewall_manager:
+            return f"❌ Solo los firewalls tienen ACLs. {self.name} es un {self.type}"
+        
+        if acl_name:
+            acl = self.firewall_manager.get_acl(acl_name)
+            if not acl:
+                return f"❌ ACL '{acl_name}' no encontrada"
+            return acl.show_rules()
+        else:
+            # Mostrar todas las ACLs
+            if not self.firewall_manager.acls:
+                return "No hay ACLs configuradas"
+            
+            output = [f"ACLs configuradas en {self.name}:"]
+            for name, acl in self.firewall_manager.acls.items():
+                output.append(f"\n{acl.show_rules()}")
+            return "\n".join(output)
+    
+    def activate_acl(self, acl_name: str) -> bool:
+        """Activa una ACL (solo para firewalls)."""
+        if self.type != "firewall" or not self.firewall_manager:
+            print(f"❌ Solo los firewalls pueden activar ACLs. {self.name} es un {self.type}")
+            return False
+        
+        return self.firewall_manager.activate_acl(acl_name)
+    
+    def show_security_log(self, max_entries: int = 50) -> str:
+        """Muestra el log de seguridad (solo para firewalls)."""
+        if self.type != "firewall" or not self.firewall_manager:
+            return f"❌ Solo los firewalls tienen logs de seguridad. {self.name} es un {self.type}"
+        
+        return self.firewall_manager.show_security_log(max_entries)
+    
+    def clear_security_log(self) -> int:
+        """Limpia el log de seguridad (solo para firewalls)."""
+        if self.type != "firewall" or not self.firewall_manager:
+            print(f"❌ Solo los firewalls pueden limpiar logs. {self.name} es un {self.type}")
+            return 0
+        
+        return self.firewall_manager.clear_security_log()
+    
+    # === MÉTODOS DE VLAN (solo para switches) ===
+    
+    def create_vlan(self, vlan_id: int, name: str, description: str = "") -> bool:
+        """Crea una nueva VLAN (solo para switches)."""
+        if self.type != "switch" or not self.vlan_manager:
+            print(f"❌ Solo los switches pueden crear VLANs. {self.name} es un {self.type}")
+            return False
+        
+        return self.vlan_manager.create_vlan(vlan_id, name, description)
+    
+    def delete_vlan(self, vlan_id: int) -> bool:
+        """Elimina una VLAN (solo para switches)."""
+        if self.type != "switch" or not self.vlan_manager:
+            print(f"❌ Solo los switches pueden eliminar VLANs. {self.name} es un {self.type}")
+            return False
+        
+        return self.vlan_manager.delete_vlan(vlan_id)
+    
+    def configure_interface_access(self, interface_name: str, vlan_id: int) -> bool:
+        """Configura una interfaz en modo access (solo para switches)."""
+        if self.type != "switch" or not self.vlan_manager:
+            print(f"❌ Solo los switches pueden configurar VLANs. {self.name} es un {self.type}")
+            return False
+        
+        return self.vlan_manager.configure_interface_access(interface_name, vlan_id)
+    
+    def configure_interface_trunk(self, interface_name: str, allowed_vlans: List[int] = None, 
+                                 native_vlan: int = 1) -> bool:
+        """Configura una interfaz en modo trunk (solo para switches)."""
+        if self.type != "switch" or not self.vlan_manager:
+            print(f"❌ Solo los switches pueden configurar VLANs. {self.name} es un {self.type}")
+            return False
+        
+        return self.vlan_manager.configure_interface_trunk(interface_name, allowed_vlans, native_vlan)
+    
+    def show_vlans(self) -> str:
+        """Muestra todas las VLANs (solo para switches)."""
+        if self.type != "switch" or not self.vlan_manager:
+            return f"❌ Solo los switches tienen VLANs. {self.name} es un {self.type}"
+        
+        return self.vlan_manager.show_vlans()
+    
+    def show_vlan_interfaces(self) -> str:
+        """Muestra la configuración de VLAN de las interfaces (solo para switches)."""
+        if self.type != "switch" or not self.vlan_manager:
+            return f"❌ Solo los switches tienen VLANs. {self.name} es un {self.type}"
+        
+        return self.vlan_manager.show_vlan_interfaces()
+    
+    def show_vlan_detail(self, vlan_id: int) -> str:
+        """Muestra detalles de una VLAN específica (solo para switches)."""
+        if self.type != "switch" or not self.vlan_manager:
+            return f"❌ Solo los switches tienen VLANs. {self.name} es un {self.type}"
+        
+        return self.vlan_manager.show_vlan_detail(vlan_id)
+    
+    # === MÉTODOS DE RIP (solo para routers) ===
+    
+    def enable_rip(self, version: int = 2) -> bool:
+        """Habilita el protocolo RIP (solo para routers)."""
+        if self.type != "router" or not self.rip_protocol:
+            print(f"❌ Solo los routers pueden usar RIP. {self.name} es un {self.type}")
+            return False
+        
+        self.rip_protocol.enable(version)
+        print(f"✅ RIP v{version} habilitado en {self.name}")
+        return True
+    
+    def disable_rip(self) -> bool:
+        """Deshabilita el protocolo RIP (solo para routers)."""
+        if self.type != "router" or not self.rip_protocol:
+            print(f"❌ Solo los routers pueden usar RIP. {self.name} es un {self.type}")
+            return False
+        
+        self.rip_protocol.disable()
+        print(f"❌ RIP deshabilitado en {self.name}")
+        return True
+    
+    def add_rip_network(self, network: str) -> bool:
+        """Agrega una red al protocolo RIP (solo para routers)."""
+        if self.type != "router" or not self.rip_protocol:
+            print(f"❌ Solo los routers pueden usar RIP. {self.name} es un {self.type}")
+            return False
+        
+        self.rip_protocol.add_network(network)
+        print(f"✅ Red {network} agregada a RIP en {self.name}")
+        return True
+    
+    def enable_rip_interface(self, interface_name: str, send_version: int = 2, receive_version: int = 2) -> bool:
+        """Habilita RIP en una interfaz específica (solo para routers)."""
+        if self.type != "router" or not self.rip_protocol:
+            print(f"❌ Solo los routers pueden usar RIP. {self.name} es un {self.type}")
+            return False
+        
+        self.rip_protocol.enable_interface(interface_name, send_version, receive_version)
+        print(f"✅ RIP habilitado en interfaz {interface_name} de {self.name}")
+        return True
+    
+    def show_rip_database(self) -> str:
+        """Muestra la base de datos RIP (solo para routers)."""
+        if self.type != "router" or not self.rip_protocol:
+            return f"❌ Solo los routers tienen RIP. {self.name} es un {self.type}"
+        
+        return self.rip_protocol.show_rip_database()
+    
+    def show_rip_interfaces(self) -> str:
+        """Muestra la configuración de interfaces RIP (solo para routers)."""
+        if self.type != "router" or not self.rip_protocol:
+            return f"❌ Solo los routers tienen RIP. {self.name} es un {self.type}"
+        
+        return self.rip_protocol.show_rip_interfaces()
+    
+    def show_rip_neighbors(self) -> str:
+        """Muestra los vecinos RIP (solo para routers)."""
+        if self.type != "router" or not self.rip_protocol:
+            return f"❌ Solo los routers tienen RIP. {self.name} es un {self.type}"
+        
+        return self.rip_protocol.show_rip_neighbors()
     
     def _get_interfaces_by_status_count(self) -> Dict[str, int]:
         """Retorna conteo de interfaces por estado."""
