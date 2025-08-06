@@ -1,23 +1,22 @@
-from collections import deque
-from typing import Optional
-
-
 class Queue:
     """
     Implementación de una cola (Queue) FIFO para gestionar paquetes entrantes y salientes.
     Utilizada para manejar colas de paquetes en dispositivos e interfaces.
     Soporta capacidad máxima opcional para evitar desbordamientos.
+    
+    Esta implementación está hecha desde cero usando solo una lista simple de Python,
+    sin utilizar estructuras de datos especializadas como collections.deque.
     """
     
-    def __init__(self, max_capacity: Optional[int] = None):
+    def __init__(self, max_capacity=None):
         """
         Inicializa una nueva cola vacía.
         
         Args:
-            max_capacity (Optional[int]): Capacidad máxima de la cola.
-                                        Si es None, la cola no tiene límite.
+            max_capacity: Capacidad máxima de la cola.
+                        Si es None, la cola no tiene límite.
         """
-        self._items = deque()
+        self._items = []  # Lista simple para almacenar elementos
         self._max_capacity = max_capacity
     
     def enqueue(self, item):
@@ -33,6 +32,7 @@ class Queue:
         if self._max_capacity is not None and len(self._items) >= self._max_capacity:
             raise Exception(f"La cola ha alcanzado su capacidad máxima de {self._max_capacity} elementos")
         
+        # Agregar al final de la lista (FIFO)
         self._items.append(item)
     
     def dequeue(self):
@@ -44,7 +44,9 @@ class Queue:
         """
         if self.is_empty():
             return None
-        return self._items.popleft()
+        
+        # Remover y retornar el primer elemento (FIFO)
+        return self._items.pop(0)
     
     def is_empty(self):
         """
@@ -88,29 +90,29 @@ class Queue:
         Returns:
             list: Lista con todos los elementos en orden
         """
-        return list(self._items)
+        return self._items.copy()
     
-    def get_capacity(self) -> Optional[int]:
+    def get_capacity(self):
         """
         Retorna la capacidad máxima configurada para la cola.
         
         Returns:
-            Optional[int]: Capacidad máxima de la cola, o None si es ilimitada
+            Capacidad máxima de la cola, o None si es ilimitada
         """
         return self._max_capacity
     
-    def get_remaining_capacity(self) -> Optional[int]:
+    def get_remaining_capacity(self):
         """
         Retorna la cantidad de elementos que aún se pueden agregar a la cola.
         
         Returns:
-            Optional[int]: Espacios disponibles, o None si la capacidad es ilimitada
+            Espacios disponibles, o None si la capacidad es ilimitada
         """
         if self._max_capacity is None:
             return None
         return self._max_capacity - len(self._items)
     
-    def is_full(self) -> bool:
+    def is_full(self):
         """
         Verifica si la cola ha alcanzado su capacidad máxima.
         
@@ -122,21 +124,28 @@ class Queue:
             return False
         return len(self._items) >= self._max_capacity
     
-    def get_statistics(self) -> dict:
+    def get_statistics(self):
         """
         Retorna estadísticas útiles sobre la cola.
         
         Returns:
             dict: Diccionario con estadísticas de la cola
         """
-        return {
+        stats = {
             "current_size": len(self._items),
             "max_capacity": self._max_capacity,
             "remaining_capacity": self.get_remaining_capacity(),
             "is_empty": self.is_empty(),
-            "is_full": self.is_full(),
-            "utilization_rate": (len(self._items) / self._max_capacity * 100) if self._max_capacity else None
+            "is_full": self.is_full()
         }
+        
+        # Calcular tasa de utilización si hay capacidad máxima
+        if self._max_capacity is not None:
+            stats["utilization_rate"] = (len(self._items) / self._max_capacity * 100)
+        else:
+            stats["utilization_rate"] = None
+            
+        return stats
     
     def __str__(self):
         """Representación en string de la cola"""

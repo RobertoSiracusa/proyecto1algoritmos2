@@ -1,18 +1,23 @@
-from typing import Dict, List, Optional, Any
-from dataclasses import dataclass
+import sys
+import os
 from datetime import datetime
 
+# Agregar el directorio padre al path para importar DataEstructures
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from DataEstructures import LinkedList
 
-@dataclass
+
 class RouteEntry:
     """Entrada en la tabla de rutas"""
-    destination: str
-    next_hop: str
-    interface: str
-    metric: int
-    protocol: str
-    timestamp: datetime
-    is_active: bool = True
+    
+    def __init__(self, destination, next_hop, interface, metric, protocol, timestamp, is_active=True):
+        self.destination = destination
+        self.next_hop = next_hop
+        self.interface = interface
+        self.metric = metric
+        self.protocol = protocol
+        self.timestamp = timestamp
+        self.is_active = is_active
 
 
 class RoutingTable:
@@ -28,12 +33,20 @@ class RoutingTable:
     
     def __init__(self):
         """Inicializa una tabla de rutas vacía."""
-        self.routes: Dict[str, RouteEntry] = {}
-        self.default_route: Optional[RouteEntry] = None
+        self.routes = LinkedList()  # Lista de rutas (simulando diccionario)
+        self.default_route = None
         self._route_counter = 0
     
-    def add_route(self, destination: str, next_hop: str, interface: str, 
-                  metric: int = 1, protocol: str = "static") -> bool:
+    def _find_route_by_destination(self, destination):
+        """Busca una ruta por destino en la lista enlazada"""
+        current = self.routes.head
+        while current is not None:
+            if current.data.destination == destination:
+                return current.data
+            current = current.next
+        return None
+    
+    def add_route(self, destination, next_hop, interface, metric=1, protocol="static"):
         """
         Agrega una ruta a la tabla.
         
@@ -52,6 +65,10 @@ class RoutingTable:
             if not destination or not next_hop or not interface:
                 return False
             
+            # Verificar si ya existe una ruta para este destino
+            if self._find_route_by_destination(destination):
+                return False
+            
             # Crear entrada de ruta
             route_entry = RouteEntry(
                 destination=destination,
@@ -63,7 +80,7 @@ class RoutingTable:
             )
             
             # Agregar a la tabla
-            self.routes[destination] = route_entry
+            self.routes.add_node(route_entry)
             self._route_counter += 1
             
             return True
@@ -71,7 +88,7 @@ class RoutingTable:
         except Exception:
             return False
     
-    def remove_route(self, destination: str) -> bool:
+    def remove_route(self, destination):
         """
         Elimina una ruta de la tabla.
         
@@ -81,12 +98,13 @@ class RoutingTable:
         Returns:
             bool: True si la ruta fue eliminada exitosamente
         """
-        if destination in self.routes:
-            del self.routes[destination]
+        route = self._find_route_by_destination(destination)
+        if route:
+            self.routes.remove_node(route)
             return True
         return False
     
-    def lookup_route(self, destination_ip: str) -> Optional[RouteEntry]:
+    def lookup_route(self, destination_ip):
         """
         Busca la mejor ruta para un destino IP.
         
@@ -97,18 +115,22 @@ class RoutingTable:
             RouteEntry: Mejor ruta encontrada o None
         """
         # Buscar ruta exacta primero
-        if destination_ip in self.routes:
-            return self.routes[destination_ip]
+        route = self._find_route_by_destination(destination_ip)
+        if route:
+            return route
         
         # Buscar ruta de red (subnet matching)
         best_route = None
         best_metric = float('inf')
         
-        for dest, route in self.routes.items():
-            if self._is_in_network(destination_ip, dest):
+        current = self.routes.head
+        while current is not None:
+            route = current.data
+            if self._is_in_network(destination_ip, route.destination):
                 if route.metric < best_metric and route.is_active:
                     best_route = route
                     best_metric = route.metric
+            current = current.next
         
         # Si no se encuentra ruta específica, usar ruta por defecto
         if not best_route and self.default_route:
@@ -116,7 +138,7 @@ class RoutingTable:
         
         return best_route
     
-    def set_default_route(self, next_hop: str, interface: str) -> bool:
+    def set_default_route(self, next_hop, interface):
         """
         Establece la ruta por defecto.
         
@@ -140,7 +162,7 @@ class RoutingTable:
         except Exception:
             return False
     
-    def get_routes_by_protocol(self, protocol: str) -> List[RouteEntry]:
+    def get_routes_by_protocol(self, protocol):
         """
         Obtiene todas las rutas de un protocolo específico.
         
@@ -148,20 +170,32 @@ class RoutingTable:
             protocol: Protocolo de routing
             
         Returns:
-            List[RouteEntry]: Lista de rutas del protocolo
+            Lista de rutas del protocolo
         """
-        return [route for route in self.routes.values() if route.protocol == protocol]
+        routes = []
+        current = self.routes.head
+        while current is not None:
+            if current.data.protocol == protocol:
+                routes.append(current.data)
+            current = current.next
+        return routes
     
-    def get_active_routes(self) -> List[RouteEntry]:
+    def get_active_routes(self):
         """
         Obtiene todas las rutas activas.
         
         Returns:
-            List[RouteEntry]: Lista de rutas activas
+            Lista de rutas activas
         """
-        return [route for route in self.routes.values() if route.is_active]
+        routes = []
+        current = self.routes.head
+        while current is not None:
+            if current.data.is_active:
+                routes.append(current.data)
+            current = current.next
+        return routes
     
-    def clear_routes(self, protocol: Optional[str] = None) -> int:
+    def clear_routes(self, protocol=None):
         """
         Limpia rutas de la tabla.
         
@@ -171,25 +205,29 @@ class RoutingTable:
         Returns:
             int: Número de rutas eliminadas
         """
-        if protocol:
-            routes_to_remove = [dest for dest, route in self.routes.items() 
-                              if route.protocol == protocol]
-        else:
-            routes_to_remove = list(self.routes.keys())
+        routes_to_remove = []
         
-        for dest in routes_to_remove:
-            del self.routes[dest]
+        # Encontrar rutas a eliminar
+        current = self.routes.head
+        while current is not None:
+            if protocol is None or current.data.protocol == protocol:
+                routes_to_remove.append(current.data)
+            current = current.next
+        
+        # Eliminar las rutas encontradas
+        for route in routes_to_remove:
+            self.routes.remove_node(route)
         
         return len(routes_to_remove)
     
-    def show_routing_table(self) -> str:
+    def show_routing_table(self):
         """
         Genera una representación en texto de la tabla de rutas.
         
         Returns:
             str: Tabla de rutas formateada
         """
-        if not self.routes and not self.default_route:
+        if self.routes.is_empty() and not self.default_route:
             return "Tabla de rutas vacía"
         
         output = []
@@ -198,11 +236,15 @@ class RoutingTable:
         output.append("Red de Destino        Próximo Salto    Interfaz    Métrica  Protocolo")
         output.append("-" * 70)
         
+        # Obtener todas las rutas y ordenarlas por destino
+        routes_list = self.routes.traverse()
+        routes_sorted = sorted(routes_list, key=lambda r: r.destination)
+        
         # Mostrar rutas normales
-        for dest, route in sorted(self.routes.items()):
+        for route in routes_sorted:
             if route.is_active:
                 protocol_code = route.protocol[0].upper()
-                output.append(f"{dest:<20} {route.next_hop:<16} {route.interface:<11} "
+                output.append(f"{route.destination:<20} {route.next_hop:<16} {route.interface:<11} "
                             f"{route.metric:<8} {protocol_code}")
         
         # Mostrar ruta por defecto
@@ -212,19 +254,22 @@ class RoutingTable:
         
         return "\n".join(output)
     
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self):
         """
         Obtiene estadísticas de la tabla de rutas.
         
         Returns:
             Dict[str, Any]: Estadísticas de la tabla
         """
-        total_routes = len(self.routes)
+        total_routes = self.routes.get_size()
         active_routes = len(self.get_active_routes())
         
         protocol_counts = {}
-        for route in self.routes.values():
-            protocol_counts[route.protocol] = protocol_counts.get(route.protocol, 0) + 1
+        current = self.routes.head
+        while current is not None:
+            protocol = current.data.protocol
+            protocol_counts[protocol] = protocol_counts.get(protocol, 0) + 1
+            current = current.next
         
         return {
             "total_routes": total_routes,
@@ -233,7 +278,7 @@ class RoutingTable:
             "has_default_route": self.default_route is not None
         }
     
-    def _is_in_network(self, ip: str, network: str) -> bool:
+    def _is_in_network(self, ip, network):
         """
         Verifica si una IP está en una red específica.
         
@@ -266,10 +311,10 @@ class RoutingTable:
         except Exception:
             return False
     
-    def __len__(self) -> int:
+    def __len__(self):
         """Retorna el número de rutas en la tabla."""
-        return len(self.routes)
+        return self.routes.get_size()
     
-    def __str__(self) -> str:
+    def __str__(self):
         """Representación en string de la tabla de rutas."""
         return self.show_routing_table() 

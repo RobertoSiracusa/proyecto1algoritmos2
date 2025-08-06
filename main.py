@@ -33,7 +33,6 @@ Date: 2025
 import sys
 import os
 import argparse
-from typing import Optional
 
 # Agregar el directorio src al path para importaciones
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
@@ -62,9 +61,9 @@ class NetworkSimulatorApp:
     
     def __init__(self):
         """Inicializa la aplicación del simulador."""
-        self.network: Optional[Network] = None
-        self.communication_manager: Optional[CommunicationManager] = None
-        self.cli_parser: Optional[CLIParser] = None
+        self.network = None
+        self.communication_manager = None
+        self.cli_parser = None
         self.app_name = "Simulador de Red"
         self.version = "1.0"
     
@@ -144,9 +143,9 @@ class NetworkSimulatorApp:
         router_lan.assignIpAddress("192.168.1.1")
         router_lan.setMacAddress("aa:bb:cc:dd:ee:01")
         
-        router_wan = router.addInterface("wan0", autoActivate=True)
-        router_wan.assignIpAddress("203.0.113.1")
-        router_wan.setMacAddress("aa:bb:cc:dd:ee:02")
+        router_lan2 = router.addInterface("lan1", autoActivate=True)
+        router_lan2.assignIpAddress("192.168.1.2")
+        router_lan2.setMacAddress("aa:bb:cc:dd:ee:03")
         
         pc1_eth = host1.addInterface("eth0", autoActivate=True)
         pc1_eth.assignIpAddress("192.168.1.10")
@@ -158,11 +157,11 @@ class NetworkSimulatorApp:
         
         # Establecer conexiones
         network.establishConnection("Demo-Router", "lan0", "PC-1", "eth0")
-        # PC-2 necesita una interfaz diferente para conectar al wan0 del router
-        pc2_wan = host2.addInterface("wan0", autoActivate=True)
-        pc2_wan.assignIpAddress("203.0.113.10")
-        pc2_wan.setMacAddress("bb:cc:dd:ee:ff:03")
-        network.establishConnection("Demo-Router", "wan0", "PC-2", "wan0")
+        # PC-2 necesita una interfaz diferente
+        pc2_eth1 = host2.addInterface("eth1", autoActivate=True)
+        pc2_eth1.assignIpAddress("192.168.1.21")
+        pc2_eth1.setMacAddress("bb:cc:dd:ee:ff:04")
+        network.establishConnection("Demo-Router", "lan1", "PC-2", "eth1")
         
         # Agregar algunas estadísticas de ejemplo
         network.total_packets_sent = 25

@@ -5,35 +5,34 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from DataEstructures.queue import Queue
-from typing import Optional, List
 
 
 class Interface:
     """Clase que representa una interfaz de red"""
     
-    def __init__(self, name: str, ipAddress: str = "", macAddress: str = "", status: str = "down"):
+    def __init__(self, name, ipAddress="", macAddress="", status="down"):
         self.name = name  # e.g., "g0/0", "eth0"
         self.ipAddress = ipAddress  # Dirección IP simulada
         self.macAddress = macAddress  # Dirección MAC
         self.status = status  # "up"/"down" o "shutdown"/"no shutdown"
-        self.connectedTo: Optional['Interface'] = None  # Referencia a otra interfaz
+        self.connectedTo = None  # Referencia a otra interfaz
         self.outgoingQueue = Queue()  # Cola de paquetes salientes
     
-    def assignIpAddress(self, ip: str):
+    def assignIpAddress(self, ip):
         """Asigna una dirección IP simulada"""
         self.ipAddress = ip
         print(f"Interface {self.name}: IP address asignada - {ip}")
     
-    def setIpAddress(self, ipAddress: str):
+    def setIpAddress(self, ipAddress):
         """Establece la dirección IP de la interfaz (método compatible con versión anterior)"""
         self.assignIpAddress(ipAddress)
     
-    def setMacAddress(self, macAddress: str):
+    def setMacAddress(self, macAddress):
         """Establece la dirección MAC de la interfaz"""
         self.macAddress = macAddress
         print(f"Interface {self.name}: MAC address asignada - {macAddress}")
     
-    def setStatus(self, status: str):
+    def setStatus(self, status):
         """Activa/desactiva la interfaz ("shutdown"/"no shutdown" o "up"/"down")"""
         valid_statuses = ["up", "down", "shutdown", "no shutdown"]
         if status in valid_statuses:
@@ -43,7 +42,7 @@ class Interface:
         else:
             print(f"Error: Estado '{status}' no válido. Opciones: {valid_statuses}")
     
-    def connect(self, otherInterface: 'Interface') -> bool:
+    def connect(self, otherInterface):
         """Establece una conexión física con otra interfaz"""
         if self.connectedTo is not None:
             print(f"Warning: Interface {self.name} ya está conectada a {self.connectedTo.name}")
@@ -73,7 +72,7 @@ class Interface:
         else:
             print(f"Interface {self.name} no está conectada")
     
-    def addPacketToQueue(self, packet) -> bool:
+    def addPacketToQueue(self, packet):
         """Agrega un paquete a la cola de salida de la interfaz"""
         if not self.isUp():
             print(f"Warning: No se puede agregar paquete. Interface {self.name} está inactiva")
@@ -87,7 +86,7 @@ class Interface:
         print(f"Interface {self.name}: Paquete agregado a cola de salida - {packet}")
         return True
     
-    def processOutgoingQueue(self) -> List:
+    def processOutgoingQueue(self):
         """Procesa la cola de salida de la interfaz"""
         processedPackets = []
         
@@ -107,21 +106,21 @@ class Interface:
         
         return processedPackets
     
-    def isUp(self) -> bool:
+    def isUp(self):
         """Verifica si la interfaz está activa"""
         return self.status in ["up", "no shutdown"]
     
-    def isDown(self) -> bool:
+    def isDown(self):
         """Verifica si la interfaz está inactiva"""
         return self.status in ["down", "shutdown"]
     
-    def isConnected(self) -> bool:
+    def isConnected(self):
         """Verifica si la interfaz está conectada a otra"""
         return self.connectedTo is not None
     
     # ===== NUEVO: Módulo 6 Configuration Persistence - Métodos de serialización =====
     
-    def to_dict(self) -> dict:
+    def to_dict(self):
         """
         Serializa la interfaz a un diccionario para guardado JSON
         
@@ -158,7 +157,7 @@ class Interface:
         return interface_dict
     
     @classmethod  
-    def from_dict(cls, interface_dict: dict):
+    def from_dict(cls, interface_dict):
         """
         Crea una interfaz desde un diccionario deserializado
         
@@ -184,7 +183,7 @@ class Interface:
         # Las conexiones se restaurarán después en un paso separado
         return interface
     
-    def get_connection_info(self) -> Optional[dict]:
+    def get_connection_info(self):
         """
         Retorna información de conexión para serialización
         

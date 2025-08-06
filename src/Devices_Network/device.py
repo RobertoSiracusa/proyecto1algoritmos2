@@ -21,7 +21,6 @@ Version: 1.0
 Date: 2025
 """
 
-from typing import List, Optional, Dict, Any, Union
 import sys
 import os
 
@@ -30,6 +29,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from DataEstructures.stack import Stack
 from DataEstructures.queue import Queue
+from DataEstructures.linked_list import LinkedList
 from .interface import Interface
 from .routing_table import RoutingTable
 from .firewall_rules import FirewallManager
@@ -52,7 +52,7 @@ class DeviceError(Exception):
     """
     Excepción base para errores específicos de dispositivos de red.
     """
-    def __init__(self, message: str, device_name: str = None):
+    def __init__(self, message, device_name=None):
         self.device_name = device_name
         super().__init__(message)
 
@@ -61,7 +61,7 @@ class InterfaceNotFoundError(DeviceError):
     """
     Excepción lanzada cuando se intenta acceder a una interfaz que no existe.
     """
-    def __init__(self, interface_name: str, device_name: str = None):
+    def __init__(self, interface_name, device_name=None):
         self.interface_name = interface_name
         message = f"Interfaz '{interface_name}' no encontrada"
         if device_name:
@@ -73,7 +73,7 @@ class InterfaceDuplicateError(DeviceError):
     """
     Excepción lanzada cuando se intenta crear una interfaz con un nombre duplicado.
     """
-    def __init__(self, interface_name: str, device_name: str = None):
+    def __init__(self, interface_name, device_name=None):
         self.interface_name = interface_name
         message = f"Ya existe una interfaz con el nombre '{interface_name}'"
         if device_name:
@@ -85,7 +85,7 @@ class DeviceOfflineError(DeviceError):
     """
     Excepción lanzada cuando se intenta realizar operaciones en un dispositivo offline.
     """
-    def __init__(self, operation: str, device_name: str = None):
+    def __init__(self, operation, device_name=None):
         self.operation = operation
         message = f"No se puede realizar '{operation}' en dispositivo offline"
         if device_name:
@@ -104,7 +104,7 @@ class Device:
     Attributes:
         name (str): Nombre único del dispositivo en la red
         type (str): Tipo de dispositivo (router, switch, host, firewall)
-        interfaces (List[Interface]): Lista de interfaces de red del dispositivo
+        interfaces (LinkedList): Lista de interfaces de red del dispositivo
         status (str): Estado actual del dispositivo (online/offline)
         receivedPacketsHistory (Stack): Historial de paquetes recibidos (LIFO)
         incomingQueue (Queue): Cola de paquetes entrantes (FIFO)
@@ -123,17 +123,17 @@ class Device:
     MAX_INTERFACES_PER_DEVICE = 100  # Límite razonable para simulación
     MAX_DEVICE_NAME_LENGTH = 50
     
-    def __init__(self, name: str, deviceType: str):
+    def __init__(self, name, deviceType):
         """
-        Inicializa un nuevo dispositivo de red con validaciones robustas.
+        Inicializa un nuevo dispositivo de red con validaciones completas.
         
         Args:
-            name (str): Nombre único del dispositivo. Debe seguir convenciones de naming.
-            deviceType (str): Tipo de dispositivo (router, switch, host, firewall).
-        
+            name (str): Nombre único del dispositivo en la red
+            deviceType (str): Tipo de dispositivo (router, switch, host, firewall)
+            
         Raises:
-            ValidationError: Si el nombre o tipo de dispositivo no son válidos
-            DeviceError: Si hay errores en la inicialización del dispositivo
+            ValidationError: Si los parámetros no son válidos
+            ValueError: Si el nombre o tipo no son válidos
             
         Example:
             >>> device = Device("Router-1", "router")
@@ -146,47 +146,47 @@ class Device:
         self._validate_device_creation_parameters(name, deviceType)
         
         # === ATRIBUTOS PÚBLICOS ===
-        self.name: str = name.strip()
-        self.type: str = deviceType.lower()  # Normalizar a minúsculas
-        self.interfaces: List[Interface] = []
-        self.status: str = "offline"  # Dispositivos inician offline por seguridad
+        self.name = name.strip()
+        self.type = deviceType.lower()  # Normalizar a minúsculas
+        self.interfaces = LinkedList()  # Lista de interfaces usando LinkedList
+        self.status = "offline"  # Dispositivos inician offline por seguridad
         
         # === ESTRUCTURAS DE DATOS PARA MANEJO DE PAQUETES ===
-        self.receivedPacketsHistory: Stack = Stack(max_capacity=1000)  # Limitar historial
-        self.incomingQueue: Queue = Queue(max_capacity=500)  # Limitar cola entrante
-        self.outgoingQueue: Queue = Queue(max_capacity=500)  # Limitar cola saliente
+        self.receivedPacketsHistory = Stack(max_capacity=1000)  # Limitar historial
+        self.incomingQueue = Queue(max_capacity=500)  # Limitar cola entrante
+        self.outgoingQueue = Queue(max_capacity=500)  # Limitar cola saliente
         
         # === TABLA DE RUTAS (solo para routers) ===
-        self.routing_table: Optional[RoutingTable] = None
+        self.routing_table = None
         if self.type == "router":
             self.routing_table = RoutingTable()
         
         # === SISTEMA DE FIREWALL (solo para firewalls) ===
-        self.firewall_manager: Optional[FirewallManager] = None
+        self.firewall_manager = None
         if self.type == "firewall":
             self.firewall_manager = FirewallManager()
         
         # === SISTEMA DE VLANs (solo para switches) ===
-        self.vlan_manager: Optional[VLANManager] = None
+        self.vlan_manager = None
         if self.type == "switch":
             self.vlan_manager = VLANManager()
         
         # === PROTOCOLO RIP (solo para routers) ===
-        self.rip_protocol: Optional[RIPProtocol] = None
+        self.rip_protocol = None
         if self.type == "router":
             self.rip_protocol = RIPProtocol(self.name)
         
         # === ATRIBUTOS PRIVADOS PARA ESTADÍSTICAS Y CONTROL ===
         import time
-        self._creation_time: float = time.time()
-        self._last_activity_time: float = self._creation_time
-        self._total_packets_processed: int = 0
-        self._interface_count: int = 0  # Contador para nombres únicos de interfaces
+        self._creation_time = time.time()
+        self._last_activity_time = self._creation_time
+        self._total_packets_processed = 0
+        self._interface_count = 0  # Contador para nombres únicos de interfaces
         
         # Registrar creación en logs (si hay sistema de logging disponible)
         self._log_device_event("created", f"Device '{self.name}' of type '{self.type}' created")
     
-    def _validate_device_creation_parameters(self, name: str, deviceType: str) -> None:
+    def _validate_device_creation_parameters(self, name, deviceType):
         """
         Valida los parámetros de creación del dispositivo usando el sistema de validaciones.
         
@@ -209,9 +209,18 @@ class Device:
             if not isinstance(deviceType, str) or deviceType.lower() not in self.VALID_DEVICE_TYPES:
                 raise ValueError(f"Tipo de dispositivo debe ser uno de: {self.VALID_DEVICE_TYPES}")
     
+    def _find_interface_by_name(self, interface_name):
+        """Busca una interfaz por nombre en la lista enlazada"""
+        current = self.interfaces.head
+        while current is not None:
+            if current.data.name == interface_name:
+                return current.data
+            current = current.next
+        return None
+    
     # === GESTIÓN DE INTERFACES ===
     
-    def addInterface(self, interfaceName: str, autoActivate: bool = False) -> Interface:
+    def addInterface(self, interfaceName, autoActivate=False):
         """
         Crea y agrega una nueva interfaz al dispositivo con validaciones completas.
         
@@ -238,27 +247,23 @@ class Device:
         # === VALIDACIONES PREVIAS ===
         self._validate_interface_addition(interfaceName)
         
-        # === CREAR NUEVA INTERFAZ ===
-        newInterface = Interface(
-            name=interfaceName,
-            ipAddress="",  # Se asignará después si es necesario
-            macAddress="",  # Se asignará después si es necesario
-            status="up" if autoActivate else "down"
-        )
+        # === CREACIÓN DE LA INTERFAZ ===
+        interface = Interface(interfaceName, self.name)
+        
+        # === ACTIVACIÓN AUTOMÁTICA SI SE SOLICITA ===
+        if autoActivate:
+            interface.setStatus("up")
         
         # === AGREGAR A LA LISTA DE INTERFACES ===
-        self.interfaces.append(newInterface)
+        self.interfaces.add_node(interface)
         self._interface_count += 1
         
-        # === ACTUALIZAR ACTIVIDAD ===
-        self._update_last_activity()
-        
-        # === LOGGING ===
+        # === REGISTRAR EVENTO ===
         self._log_device_event("interface_added", f"Interface '{interfaceName}' added to device '{self.name}'")
         
-        return newInterface
+        return interface
     
-    def _validate_interface_addition(self, interfaceName: str) -> None:
+    def _validate_interface_addition(self, interfaceName):
         """
         Valida que se pueda agregar una nueva interfaz con el nombre especificado.
         
@@ -277,17 +282,17 @@ class Device:
             raise ValueError("El nombre de la interfaz debe ser un string no vacío")
         
         # Verificar duplicados
-        if self.getInterface(interfaceName) is not None:
+        if self._find_interface_by_name(interfaceName) is not None:
             raise InterfaceDuplicateError(interfaceName, self.name)
         
         # Verificar límite máximo de interfaces
-        if len(self.interfaces) >= self.MAX_INTERFACES_PER_DEVICE:
+        if self.interfaces.size >= self.MAX_INTERFACES_PER_DEVICE:
             raise DeviceError(
                 f"Se ha alcanzado el límite máximo de {self.MAX_INTERFACES_PER_DEVICE} interfaces",
                 self.name
             )
     
-    def getInterface(self, interfaceName: str) -> Optional[Interface]:
+    def getInterface(self, interfaceName):
         """
         Recupera una interfaz por su nombre con búsqueda optimizada.
         
@@ -295,7 +300,7 @@ class Device:
             interfaceName (str): Nombre de la interfaz a buscar
         
         Returns:
-            Optional[Interface]: La interfaz encontrada o None si no existe
+            Interface: La interfaz encontrada o None si no existe
             
         Example:
             >>> device = Device("Router-1", "router")
@@ -308,13 +313,15 @@ class Device:
             return None
         
         # Búsqueda lineal optimizada (para listas pequeñas es más eficiente que dict)
-        for interface in self.interfaces:
-            if interface.name == interfaceName:
-                return interface
+        current = self.interfaces.head
+        while current is not None:
+            if current.data.name == interfaceName:
+                return current.data
+            current = current.next
         
         return None
     
-    def removeInterface(self, interfaceName: str) -> bool:
+    def removeInterface(self, interfaceName):
         """
         Remueve una interfaz del dispositivo de forma segura.
         
@@ -327,7 +334,7 @@ class Device:
         Raises:
             InterfaceNotFoundError: Si la interfaz no existe
         """
-        interface = self.getInterface(interfaceName)
+        interface = self._find_interface_by_name(interfaceName)
         if interface is None:
             raise InterfaceNotFoundError(interfaceName, self.name)
         
@@ -336,7 +343,7 @@ class Device:
             interface.disconnect()
         
         # Remover de la lista
-        self.interfaces.remove(interface)
+        self.interfaces.remove_node(interface)
         
         # Actualizar actividad
         self._update_last_activity()
@@ -346,7 +353,7 @@ class Device:
         
         return True
     
-    def getInterfacesByStatus(self, status: str) -> List[Interface]:
+    def getInterfacesByStatus(self, status):
         """
         Retorna todas las interfaces que tienen un estado específico.
         
@@ -356,29 +363,47 @@ class Device:
         Returns:
             List[Interface]: Lista de interfaces con el estado especificado
         """
-        return [iface for iface in self.interfaces if iface.status == status]
+        current = self.interfaces.head
+        active_interfaces = []
+        while current is not None:
+            if current.data.status == status:
+                active_interfaces.append(current.data)
+            current = current.next
+        return active_interfaces
     
-    def getActiveInterfaces(self) -> List[Interface]:
+    def getActiveInterfaces(self):
         """
         Retorna una lista de interfaces activas (up o no shutdown).
         
         Returns:
             List[Interface]: Lista de interfaces activas y funcionalmente disponibles
         """
-        return [interface for interface in self.interfaces if interface.isUp()]
+        current = self.interfaces.head
+        active_interfaces = []
+        while current is not None:
+            if current.data.isUp():
+                active_interfaces.append(current.data)
+            current = current.next
+        return active_interfaces
     
-    def getConnectedInterfaces(self) -> List[Interface]:
+    def getConnectedInterfaces(self):
         """
         Retorna una lista de interfaces que tienen conexiones físicas.
         
         Returns:
             List[Interface]: Lista de interfaces con conexiones establecidas
         """
-        return [interface for interface in self.interfaces if interface.isConnected()]
+        current = self.interfaces.head
+        connected_interfaces = []
+        while current is not None:
+            if current.data.isConnected():
+                connected_interfaces.append(current.data)
+            current = current.next
+        return connected_interfaces
     
     # === GESTIÓN DE ESTADO DEL DISPOSITIVO ===
     
-    def setStatus(self, status: str, force: bool = False) -> None:
+    def setStatus(self, status, force=False):
         """
         Cambia el estado online/offline del dispositivo con validaciones.
         
@@ -432,16 +457,21 @@ class Device:
             f"Device '{self.name}' status changed from '{old_status}' to '{status}'"
         )
     
-    def _has_active_connections(self) -> bool:
+    def _has_active_connections(self):
         """
         Verifica si el dispositivo tiene conexiones activas.
         
         Returns:
             bool: True si hay al menos una interfaz conectada y activa
         """
-        return any(iface.isConnected() and iface.isUp() for iface in self.interfaces)
+        current = self.interfaces.head
+        while current is not None:
+            if current.data.isConnected() and current.data.isUp():
+                return True
+            current = current.next
+        return False
     
-    def _handle_going_offline(self) -> None:
+    def _handle_going_offline(self):
         """
         Maneja las acciones necesarias cuando el dispositivo se desconecta.
         """
@@ -451,7 +481,7 @@ class Device:
         
         # Podrían agregarse más acciones específicas aquí
     
-    def _handle_going_online(self) -> None:
+    def _handle_going_online(self):
         """
         Maneja las acciones necesarias cuando el dispositivo se conecta.
         """
@@ -462,7 +492,7 @@ class Device:
         # - Sincronizar con sistemas de monitoreo
         pass
     
-    def isOnline(self) -> bool:
+    def isOnline(self):
         """
         Verifica si el dispositivo está online de forma thread-safe.
         
@@ -471,7 +501,7 @@ class Device:
         """
         return self.status == "online"
     
-    def isOffline(self) -> bool:
+    def isOffline(self):
         """
         Verifica si el dispositivo está offline de forma thread-safe.
         
@@ -482,7 +512,7 @@ class Device:
     
     # === PROCESAMIENTO DE PAQUETES ===
     
-    def receivePacket(self, packet: Any, source_interface: Optional[str] = None) -> bool:
+    def receivePacket(self, packet, source_interface=None):
         """
         Recibe un paquete y lo agrega al historial con validaciones completas.
         
@@ -528,7 +558,7 @@ class Device:
             self._log_device_event("error", f"Error receiving packet on device '{self.name}': {str(e)}")
             return False
     
-    def processOutgoingQueue(self) -> List[Any]:
+    def processOutgoingQueue(self):
         """
         Procesa todos los paquetes en la cola de salida con manejo robusto de errores.
         
@@ -576,7 +606,7 @@ class Device:
         
         return processed_packets
     
-    def _process_single_packet(self, packet: Any) -> bool:
+    def _process_single_packet(self, packet):
         """
         Procesa un único paquete según el tipo de dispositivo.
         
@@ -599,7 +629,7 @@ class Device:
             # Procesamiento genérico
             return True
     
-    def _router_process_packet(self, packet: Any) -> bool:
+    def _router_process_packet(self, packet):
         """Procesamiento específico para routers."""
         try:
             # Verificar que tenemos tabla de rutas
@@ -643,7 +673,7 @@ class Device:
             print(f"❌ Error procesando paquete en router {self.name}: {str(e)}")
             return False
     
-    def _switch_process_packet(self, packet: Any) -> bool:
+    def _switch_process_packet(self, packet):
         """Procesamiento específico para switches."""
         # En una implementación completa, aquí iría:
         # - Análisis de cabeceras Ethernet
@@ -651,7 +681,7 @@ class Device:
         # - Flooding o forwarding según corresponda
         return True
     
-    def _host_process_packet(self, packet: Any) -> bool:
+    def _host_process_packet(self, packet):
         """Procesamiento específico para hosts."""
         # En una implementación completa, aquí iría:
         # - Verificar si el paquete es para este host
@@ -659,7 +689,7 @@ class Device:
         # - Generar respuestas si es necesario
         return True
     
-    def _firewall_process_packet(self, packet: Any) -> bool:
+    def _firewall_process_packet(self, packet):
         """Procesamiento específico para firewalls."""
         if not self.firewall_manager:
             return True
@@ -676,7 +706,7 @@ class Device:
         print(f"✅ Paquete {getattr(packet, 'id', 'unknown')} permitido por firewall {self.name}")
         return True
     
-    def addPacketToOutgoingQueue(self, packet: Any) -> bool:
+    def addPacketToOutgoingQueue(self, packet):
         """
         Agrega un paquete a la cola de salida con validaciones.
         
@@ -701,7 +731,7 @@ class Device:
     
     # === GESTIÓN DE NOMBRES ===
     
-    def setHostname(self, newName: str) -> None:
+    def setHostname(self, newName):
         """
         Establece un nuevo nombre para el dispositivo con validaciones completas.
         
@@ -735,7 +765,7 @@ class Device:
     
     # === MÉTODOS DE INFORMACIÓN Y ESTADÍSTICAS ===
     
-    def showHistory(self, max_entries: int = 20) -> None:
+    def showHistory(self, max_entries=20):
         """
         Muestra el historial de paquetes recibidos con formato mejorado.
         
@@ -774,7 +804,7 @@ class Device:
         
         print("=" * 60)
     
-    def showQueue(self) -> None:
+    def showQueue(self):
         """
         Muestra los paquetes pendientes en las colas con información detallada.
         """
@@ -812,7 +842,7 @@ class Device:
         
         print("=" * 50)
     
-    def showInterfaces(self, detailed: bool = False) -> None:
+    def showInterfaces(self, detailed=False):
         """
         Muestra la configuración de las interfaces con información completa.
         
@@ -823,13 +853,16 @@ class Device:
         print(f"INTERFACES DE RED - {self.name}")
         print(f"{'='*60}")
         print(f"Dispositivo: {self.type.upper()} | Estado: {self.status.upper()}")
-        print(f"Total interfaces: {len(self.interfaces)} | Activas: {len(self.getActiveInterfaces())} | Conectadas: {len(self.getConnectedInterfaces())}")
+        print(f"Total interfaces: {self.interfaces.size} | Activas: {len(self.getActiveInterfaces())} | Conectadas: {len(self.getConnectedInterfaces())}")
         print(f"{'='*60}")
         
-        if not self.interfaces:
+        if self.interfaces.is_empty():
             print("🔌 No hay interfaces configuradas")
         else:
-            for i, interface in enumerate(self.interfaces, 1):
+            current = self.interfaces.head
+            i = 1
+            while current is not None:
+                interface = current.data
                 status_icon = "🟢" if interface.isUp() else "🔴"
                 connection_icon = "🔗" if interface.isConnected() else "❌"
                 
@@ -837,7 +870,7 @@ class Device:
                 
                 if detailed:
                     # Información adicional en modo detallado
-                    print(f"     📍 Estado: {interface.status}")
+                    print(f"     �� Estado: {interface.status}")
                     if interface.ipAddress:
                         print(f"     🌐 IP: {interface.ipAddress}")
                     if interface.macAddress:
@@ -849,26 +882,28 @@ class Device:
                     queue_size = len(interface.outgoingQueue) if hasattr(interface.outgoingQueue, '__len__') else 0
                     print(f"     📊 Cola salida: {queue_size} paquetes")
                     print()
+                current = current.next
+                i += 1
         
         print("=" * 60)
     
-    def getInterfaceCount(self) -> int:
+    def getInterfaceCount(self):
         """
         Retorna el número total de interfaces del dispositivo.
         
         Returns:
             int: Número de interfaces configuradas
         """
-        return len(self.interfaces)
+        return self.interfaces.size
     
-    def getDeviceStatistics(self) -> Dict[str, Any]:
+    def getDeviceStatistics(self):
         """
         Retorna estadísticas completas del dispositivo.
         
         Returns:
             Dict[str, Any]: Diccionario con estadísticas detalladas
         """
-        return {
+        stats = {
             "device_info": {
                 "name": self.name,
                 "type": self.type,
@@ -877,7 +912,7 @@ class Device:
                 "last_activity": self._last_activity_time
             },
             "interfaces": {
-                "total": len(self.interfaces),
+                "total": self.interfaces.size,
                 "active": len(self.getActiveInterfaces()),
                 "connected": len(self.getConnectedInterfaces()),
                 "by_status": self._get_interfaces_by_status_count()
@@ -912,11 +947,11 @@ class Device:
             stats["rip"] = self.rip_protocol.get_statistics()
         
         return stats
-    
+        
     # === MÉTODOS DE ROUTING (solo para routers) ===
     
-    def add_route(self, destination: str, next_hop: str, interface: str, 
-                  metric: int = 1, protocol: str = "static") -> bool:
+    def add_route(self, destination, next_hop, interface, 
+                  metric=1, protocol="static"):
         """
         Agrega una ruta a la tabla de routing (solo para routers).
         
@@ -940,7 +975,7 @@ class Device:
         
         return self.routing_table.add_route(destination, next_hop, interface, metric, protocol)
     
-    def remove_route(self, destination: str) -> bool:
+    def remove_route(self, destination):
         """
         Elimina una ruta de la tabla de routing (solo para routers).
         
@@ -955,7 +990,7 @@ class Device:
         
         return self.routing_table.remove_route(destination)
     
-    def show_routing_table(self) -> str:
+    def show_routing_table(self):
         """
         Muestra la tabla de rutas (solo para routers).
         
@@ -970,7 +1005,7 @@ class Device:
         
         return self.routing_table.show_routing_table()
     
-    def set_default_route(self, next_hop: str, interface: str) -> bool:
+    def set_default_route(self, next_hop, interface):
         """
         Establece la ruta por defecto (solo para routers).
         
@@ -986,7 +1021,7 @@ class Device:
         
         return self.routing_table.set_default_route(next_hop, interface)
     
-    def clear_routes(self, protocol: str = None) -> int:
+    def clear_routes(self, protocol=None):
         """
         Limpia rutas de la tabla (solo para routers).
         
@@ -1003,7 +1038,7 @@ class Device:
     
     # === MÉTODOS DE FIREWALL (solo para firewalls) ===
     
-    def create_acl(self, name: str, acl_type: str = "extended") -> bool:
+    def create_acl(self, name, acl_type="extended"):
         """Crea una nueva ACL (solo para firewalls)."""
         if self.type != "firewall" or not self.firewall_manager:
             print(f"❌ Solo los firewalls pueden crear ACLs. {self.name} es un {self.type}")
@@ -1011,11 +1046,11 @@ class Device:
         
         return self.firewall_manager.create_acl(name, acl_type)
     
-    def add_firewall_rule(self, acl_name: str, action: str, protocol: str, 
-                         source_ip: str, destination_ip: str, 
-                         source_wildcard: str = "0.0.0.0",
-                         destination_wildcard: str = "0.0.0.0",
-                         description: str = "") -> bool:
+    def add_firewall_rule(self, acl_name, action, protocol, 
+                         source_ip, destination_ip, 
+                         source_wildcard="0.0.0.0",
+                         destination_wildcard="0.0.0.0",
+                         description=""):
         """Agrega una regla a una ACL (solo para firewalls)."""
         if self.type != "firewall" or not self.firewall_manager:
             print(f"❌ Solo los firewalls pueden agregar reglas. {self.name} es un {self.type}")
@@ -1029,7 +1064,7 @@ class Device:
         return acl.add_rule(action, protocol, source_ip, destination_ip, 
                            source_wildcard, destination_wildcard, description=description)
     
-    def show_acl(self, acl_name: str = None) -> str:
+    def show_acl(self, acl_name=None):
         """Muestra las reglas de una ACL (solo para firewalls)."""
         if self.type != "firewall" or not self.firewall_manager:
             return f"❌ Solo los firewalls tienen ACLs. {self.name} es un {self.type}"
@@ -1049,7 +1084,7 @@ class Device:
                 output.append(f"\n{acl.show_rules()}")
             return "\n".join(output)
     
-    def activate_acl(self, acl_name: str) -> bool:
+    def activate_acl(self, acl_name):
         """Activa una ACL (solo para firewalls)."""
         if self.type != "firewall" or not self.firewall_manager:
             print(f"❌ Solo los firewalls pueden activar ACLs. {self.name} es un {self.type}")
@@ -1057,14 +1092,14 @@ class Device:
         
         return self.firewall_manager.activate_acl(acl_name)
     
-    def show_security_log(self, max_entries: int = 50) -> str:
+    def show_security_log(self, max_entries=50):
         """Muestra el log de seguridad (solo para firewalls)."""
         if self.type != "firewall" or not self.firewall_manager:
             return f"❌ Solo los firewalls tienen logs de seguridad. {self.name} es un {self.type}"
         
         return self.firewall_manager.show_security_log(max_entries)
     
-    def clear_security_log(self) -> int:
+    def clear_security_log(self):
         """Limpia el log de seguridad (solo para firewalls)."""
         if self.type != "firewall" or not self.firewall_manager:
             print(f"❌ Solo los firewalls pueden limpiar logs. {self.name} es un {self.type}")
@@ -1074,7 +1109,7 @@ class Device:
     
     # === MÉTODOS DE VLAN (solo para switches) ===
     
-    def create_vlan(self, vlan_id: int, name: str, description: str = "") -> bool:
+    def create_vlan(self, vlan_id, name, description=""):
         """Crea una nueva VLAN (solo para switches)."""
         if self.type != "switch" or not self.vlan_manager:
             print(f"❌ Solo los switches pueden crear VLANs. {self.name} es un {self.type}")
@@ -1082,7 +1117,7 @@ class Device:
         
         return self.vlan_manager.create_vlan(vlan_id, name, description)
     
-    def delete_vlan(self, vlan_id: int) -> bool:
+    def delete_vlan(self, vlan_id):
         """Elimina una VLAN (solo para switches)."""
         if self.type != "switch" or not self.vlan_manager:
             print(f"❌ Solo los switches pueden eliminar VLANs. {self.name} es un {self.type}")
@@ -1090,7 +1125,7 @@ class Device:
         
         return self.vlan_manager.delete_vlan(vlan_id)
     
-    def configure_interface_access(self, interface_name: str, vlan_id: int) -> bool:
+    def configure_interface_access(self, interface_name, vlan_id):
         """Configura una interfaz en modo access (solo para switches)."""
         if self.type != "switch" or not self.vlan_manager:
             print(f"❌ Solo los switches pueden configurar VLANs. {self.name} es un {self.type}")
@@ -1098,8 +1133,8 @@ class Device:
         
         return self.vlan_manager.configure_interface_access(interface_name, vlan_id)
     
-    def configure_interface_trunk(self, interface_name: str, allowed_vlans: List[int] = None, 
-                                 native_vlan: int = 1) -> bool:
+    def configure_interface_trunk(self, interface_name, allowed_vlans=None, 
+                                 native_vlan=1):
         """Configura una interfaz en modo trunk (solo para switches)."""
         if self.type != "switch" or not self.vlan_manager:
             print(f"❌ Solo los switches pueden configurar VLANs. {self.name} es un {self.type}")
@@ -1107,21 +1142,21 @@ class Device:
         
         return self.vlan_manager.configure_interface_trunk(interface_name, allowed_vlans, native_vlan)
     
-    def show_vlans(self) -> str:
+    def show_vlans(self):
         """Muestra todas las VLANs (solo para switches)."""
         if self.type != "switch" or not self.vlan_manager:
             return f"❌ Solo los switches tienen VLANs. {self.name} es un {self.type}"
         
         return self.vlan_manager.show_vlans()
     
-    def show_vlan_interfaces(self) -> str:
+    def show_vlan_interfaces(self):
         """Muestra la configuración de VLAN de las interfaces (solo para switches)."""
         if self.type != "switch" or not self.vlan_manager:
             return f"❌ Solo los switches tienen VLANs. {self.name} es un {self.type}"
         
         return self.vlan_manager.show_vlan_interfaces()
     
-    def show_vlan_detail(self, vlan_id: int) -> str:
+    def show_vlan_detail(self, vlan_id):
         """Muestra detalles de una VLAN específica (solo para switches)."""
         if self.type != "switch" or not self.vlan_manager:
             return f"❌ Solo los switches tienen VLANs. {self.name} es un {self.type}"
@@ -1130,7 +1165,7 @@ class Device:
     
     # === MÉTODOS DE RIP (solo para routers) ===
     
-    def enable_rip(self, version: int = 2) -> bool:
+    def enable_rip(self, version=2):
         """Habilita el protocolo RIP (solo para routers)."""
         if self.type != "router" or not self.rip_protocol:
             print(f"❌ Solo los routers pueden usar RIP. {self.name} es un {self.type}")
@@ -1140,7 +1175,7 @@ class Device:
         print(f"✅ RIP v{version} habilitado en {self.name}")
         return True
     
-    def disable_rip(self) -> bool:
+    def disable_rip(self):
         """Deshabilita el protocolo RIP (solo para routers)."""
         if self.type != "router" or not self.rip_protocol:
             print(f"❌ Solo los routers pueden usar RIP. {self.name} es un {self.type}")
@@ -1150,7 +1185,7 @@ class Device:
         print(f"❌ RIP deshabilitado en {self.name}")
         return True
     
-    def add_rip_network(self, network: str) -> bool:
+    def add_rip_network(self, network):
         """Agrega una red al protocolo RIP (solo para routers)."""
         if self.type != "router" or not self.rip_protocol:
             print(f"❌ Solo los routers pueden usar RIP. {self.name} es un {self.type}")
@@ -1160,7 +1195,7 @@ class Device:
         print(f"✅ Red {network} agregada a RIP en {self.name}")
         return True
     
-    def enable_rip_interface(self, interface_name: str, send_version: int = 2, receive_version: int = 2) -> bool:
+    def enable_rip_interface(self, interface_name, send_version=2, receive_version=2):
         """Habilita RIP en una interfaz específica (solo para routers)."""
         if self.type != "router" or not self.rip_protocol:
             print(f"❌ Solo los routers pueden usar RIP. {self.name} es un {self.type}")
@@ -1170,38 +1205,41 @@ class Device:
         print(f"✅ RIP habilitado en interfaz {interface_name} de {self.name}")
         return True
     
-    def show_rip_database(self) -> str:
+    def show_rip_database(self):
         """Muestra la base de datos RIP (solo para routers)."""
         if self.type != "router" or not self.rip_protocol:
             return f"❌ Solo los routers tienen RIP. {self.name} es un {self.type}"
         
         return self.rip_protocol.show_rip_database()
     
-    def show_rip_interfaces(self) -> str:
+    def show_rip_interfaces(self):
         """Muestra la configuración de interfaces RIP (solo para routers)."""
         if self.type != "router" or not self.rip_protocol:
             return f"❌ Solo los routers tienen RIP. {self.name} es un {self.type}"
         
         return self.rip_protocol.show_rip_interfaces()
     
-    def show_rip_neighbors(self) -> str:
+    def show_rip_neighbors(self):
         """Muestra los vecinos RIP (solo para routers)."""
         if self.type != "router" or not self.rip_protocol:
             return f"❌ Solo los routers tienen RIP. {self.name} es un {self.type}"
         
         return self.rip_protocol.show_rip_neighbors()
     
-    def _get_interfaces_by_status_count(self) -> Dict[str, int]:
+    def _get_interfaces_by_status_count(self):
         """Retorna conteo de interfaces por estado."""
         status_count = {}
-        for interface in self.interfaces:
+        current = self.interfaces.head
+        while current is not None:
+            interface = current.data
             status = interface.status
             status_count[status] = status_count.get(status, 0) + 1
+            current = current.next
         return status_count
     
     # === MÉTODOS DE SERIALIZACIÓN (MÓDULO 6 - Configuration Persistence) ===
     
-    def to_dict(self) -> dict:
+    def to_dict(self):
         """
         Serializa el dispositivo a un diccionario para guardado JSON con validaciones.
         
@@ -1222,19 +1260,21 @@ class Device:
             },
             "interfaces": [],
             "statistics": {
-                "interface_count": len(self.interfaces),
+                "interface_count": self.interfaces.size,
                 "active_interfaces": len(self.getActiveInterfaces()),
                 "connected_interfaces": len(self.getConnectedInterfaces())
             }
         }
         
         # === SERIALIZAR INTERFACES ===
-        for interface in self.interfaces:
+        current = self.interfaces.head
+        while current is not None:
             try:
-                device_dict["interfaces"].append(interface.to_dict())
+                device_dict["interfaces"].append(current.data.to_dict())
             except Exception as e:
                 # Manejar errores de serialización de interfaces individuales
-                self._log_device_event("error", f"Error serializing interface {interface.name}: {str(e)}")
+                self._log_device_event("error", f"Error serializing interface {current.data.name}: {str(e)}")
+            current = current.next
         
         # === SERIALIZAR HISTORIAL DE PAQUETES (LIMITADO) ===
         history_items = []
@@ -1262,7 +1302,7 @@ class Device:
         return device_dict
     
     @classmethod
-    def from_dict(cls, device_dict: dict, interface_mapping: dict = None) -> 'Device':
+    def from_dict(cls, device_dict, interface_mapping=None):
         """
         Crea un dispositivo desde un diccionario deserializado con validaciones completas.
         
@@ -1314,7 +1354,7 @@ class Device:
             for interface_data in device_dict["interfaces"]:
                 try:
                     interface = Interface.from_dict(interface_data)
-                    device.interfaces.append(interface)
+                    device.interfaces.add_node(interface)
                     
                     # Registrar interfaz en mapeo global si se proporciona
                     if interface_mapping is not None:
@@ -1344,7 +1384,7 @@ class Device:
         
         return device
     
-    def get_config_summary(self) -> str:
+    def get_config_summary(self):
         """
         Retorna un resumen de configuración del dispositivo en formato legible.
         
@@ -1355,11 +1395,13 @@ class Device:
         summary.append(f"Device: {self.name} ({self.type}) - {self.status}")
         summary.append(f"  Created: {self._format_timestamp(self._creation_time)}")
         summary.append(f"  Last Activity: {self._format_timestamp(self._last_activity_time)}")
-        summary.append(f"  Interfaces: {len(self.interfaces)} total, {len(self.getActiveInterfaces())} active")
+        summary.append(f"  Interfaces: {self.interfaces.size} total, {len(self.getActiveInterfaces())} active")
         summary.append(f"  Packets Processed: {self._total_packets_processed}")
         
         # Detalles de interfaces
-        for interface in self.interfaces:
+        current = self.interfaces.head
+        while current is not None:
+            interface = current.data
             ip_info = f" [{interface.ipAddress}]" if interface.ipAddress else ""
             status_indicator = "🟢" if interface.isUp() else "🔴"
             connection_info = ""
@@ -1370,21 +1412,22 @@ class Device:
                 connection_info = f" <-> {connected_device}:{interface.connectedTo.name if interface.connectedTo else 'None'}"
             
             summary.append(f"    {status_indicator} {interface.name}{ip_info} ({interface.status}){connection_info}")
+            current = current.next
         
         return "\n".join(summary)
     
     # === MÉTODOS AUXILIARES Y UTILIDADES ===
     
-    def _update_last_activity(self) -> None:
+    def _update_last_activity(self):
         """Actualiza el timestamp de última actividad."""
         self._last_activity_time = self._get_current_time()
     
-    def _get_current_time(self) -> float:
+    def _get_current_time(self):
         """Retorna el timestamp actual."""
         import time
         return time.time()
     
-    def _format_timestamp(self, timestamp: float) -> str:
+    def _format_timestamp(self, timestamp):
         """Formatea un timestamp para display legible."""
         try:
             import datetime
@@ -1392,7 +1435,7 @@ class Device:
         except:
             return str(timestamp)
     
-    def _log_device_event(self, event_type: str, message: str) -> None:
+    def _log_device_event(self, event_type, message):
         """
         Registra eventos del dispositivo (placeholder para sistema de logging).
         
@@ -1406,7 +1449,7 @@ class Device:
     
     # === MÉTODOS ESPECIALES (DUNDER METHODS) ===
     
-    def __str__(self) -> str:
+    def __str__(self):
         """
         Representación en string del dispositivo para debugging y display.
         
@@ -1414,9 +1457,9 @@ class Device:
             str: Representación legible del dispositivo
         """
         status_indicator = "🟢" if self.isOnline() else "🔴"
-        return f"{status_indicator} {self.name} ({self.type}) - {len(self.interfaces)} interfaces"
+        return f"{status_indicator} {self.name} ({self.type}) - {self.interfaces.size} interfaces"
     
-    def __repr__(self) -> str:
+    def __repr__(self):
         """
         Representación oficial del dispositivo para debugging avanzado.
         
@@ -1425,7 +1468,7 @@ class Device:
         """
         return f"Device(name='{self.name}', deviceType='{self.type}')"
     
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other):
         """
         Permite comparar dos dispositivos por igualdad basada en nombre y tipo.
         
@@ -1439,7 +1482,7 @@ class Device:
             return False
         return self.name == other.name and self.type == other.type
     
-    def __hash__(self) -> int:
+    def __hash__(self):
         """
         Permite usar dispositivos como claves en diccionarios y sets.
         
@@ -1448,25 +1491,11 @@ class Device:
         """
         return hash((self.name, self.type))
     
-    def __len__(self) -> int:
+    def __len__(self):
         """
         Permite usar len() para obtener el número de interfaces.
         
         Returns:
             int: Número de interfaces del dispositivo
         """
-        return len(self.interfaces) 
-
-class RoutingTable:
-    def __init__(self):
-        self.routes = {}
-    
-    def add_route(self, destination, next_hop, interface, metric=1):
-        self.routes[destination] = {
-            'next_hop': next_hop,
-            'interface': interface,
-            'metric': metric
-        }
-    
-    def lookup_route(self, destination):
-        return self.routes.get(destination)
+        return self.interfaces.size

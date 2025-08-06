@@ -1,29 +1,31 @@
-from typing import Dict, List, Optional, Any
-from dataclasses import dataclass
+import sys
+import os
 from datetime import datetime
 import re
 
-@dataclass
+# Agregar el directorio padre al path para importar DataEstructures
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from DataEstructures import LinkedList
+
+
 class FirewallRule:
     """Regla de firewall individual"""
-    id: int
-    action: str  # "permit" o "deny"
-    protocol: str  # "ip", "tcp", "udp", "icmp"
-    source_ip: str
-    source_wildcard: str
-    destination_ip: str
-    destination_wildcard: str
-    source_port: Optional[str] = None
-    destination_port: Optional[str] = None
-    description: str = ""
-    timestamp: datetime = None
-    is_active: bool = True
     
-    def __post_init__(self):
-        if self.timestamp is None:
-            self.timestamp = datetime.now()
+    def __init__(self, id, action, protocol, source_ip, source_wildcard, destination_ip, destination_wildcard, source_port=None, destination_port=None, description="", timestamp=None, is_active=True):
+        self.id = id
+        self.action = action  # "permit" o "deny"
+        self.protocol = protocol  # "ip", "tcp", "udp", "icmp"
+        self.source_ip = source_ip
+        self.source_wildcard = source_wildcard
+        self.destination_ip = destination_ip
+        self.destination_wildcard = destination_wildcard
+        self.source_port = source_port
+        self.destination_port = destination_port
+        self.description = description
+        self.timestamp = timestamp if timestamp is not None else datetime.now()
+        self.is_active = is_active
     
-    def matches_packet(self, packet: Any) -> bool:
+    def matches_packet(self, packet):
         """Verifica si un paquete coincide con esta regla"""
         try:
             # Extraer información del paquete
@@ -45,7 +47,7 @@ class FirewallRule:
         except:
             return False
     
-    def _ip_matches(self, packet_ip: str, rule_ip: str, wildcard: str) -> bool:
+    def _ip_matches(self, packet_ip, rule_ip, wildcard):
         """Verifica si una IP coincide con la regla usando wildcard"""
         if rule_ip == "any" or wildcard == "0.0.0.0":
             return True
@@ -66,18 +68,18 @@ class FirewallRule:
 class FirewallACL:
     """Access Control List para firewall"""
     
-    def __init__(self, name: str, acl_type: str = "extended"):
+    def __init__(self, name, acl_type="extended"):
         self.name = name
         self.acl_type = acl_type  # "standard" o "extended"
-        self.rules: List[FirewallRule] = []
+        self.rules = LinkedList()  # Lista de reglas (simulando lista)
         self._rule_counter = 1
         self.is_active = True
     
-    def add_rule(self, action: str, protocol: str, source_ip: str, 
-                 destination_ip: str, source_wildcard: str = "0.0.0.0",
-                 destination_wildcard: str = "0.0.0.0",
-                 source_port: str = None, destination_port: str = None,
-                 description: str = "") -> bool:
+    def add_rule(self, action, protocol, source_ip, 
+                 destination_ip, source_wildcard="0.0.0.0",
+                 destination_wildcard="0.0.0.0",
+                 source_port=None, destination_port=None,
+                 description=""):
         """Agrega una regla a la ACL"""
         try:
             rule = FirewallRule(
@@ -93,48 +95,55 @@ class FirewallACL:
                 description=description
             )
             
-            self.rules.append(rule)
+            self.rules.add_node(rule)
             self._rule_counter += 1
             return True
         except Exception as e:
             print(f"Error agregando regla: {e}")
             return False
     
-    def remove_rule(self, rule_id: int) -> bool:
+    def remove_rule(self, rule_id):
         """Elimina una regla por ID"""
-        for i, rule in enumerate(self.rules):
-            if rule.id == rule_id:
-                del self.rules[i]
+        current = self.rules.head
+        while current is not None:
+            if current.data.id == rule_id:
+                self.rules.remove_node(current.data)
                 return True
+            current = current.next
         return False
     
-    def clear_rules(self) -> int:
+    def clear_rules(self):
         """Limpia todas las reglas"""
-        count = len(self.rules)
+        count = self.rules.get_size()
         self.rules.clear()
         return count
     
-    def evaluate_packet(self, packet: Any) -> tuple[bool, Optional[FirewallRule]]:
+    def evaluate_packet(self, packet):
         """Evalúa un paquete contra todas las reglas"""
         if not self.is_active:
             return True, None
         
-        for rule in self.rules:
+        current = self.rules.head
+        while current is not None:
+            rule = current.data
             if rule.is_active and rule.matches_packet(packet):
                 return rule.action == "permit", rule
+            current = current.next
         
         # Regla por defecto: deny
         return False, None
     
-    def show_rules(self) -> str:
+    def show_rules(self):
         """Muestra las reglas de la ACL"""
-        if not self.rules:
+        if self.rules.is_empty():
             return f"ACL {self.name} está vacía"
         
         output = [f"Access Control List {self.name} ({self.acl_type})"]
         output.append("-" * 60)
         
-        for rule in self.rules:
+        current = self.rules.head
+        while current is not None:
+            rule = current.data
             status = "ACTIVE" if rule.is_active else "INACTIVE"
             output.append(f"{rule.id:3} {rule.action.upper():6} {rule.protocol:4} "
                          f"{rule.source_ip:15} {rule.source_wildcard:15} -> "
@@ -142,18 +151,35 @@ class FirewallACL:
                          f"[{status}]")
             if rule.description:
                 output.append(f"     {rule.description}")
+            current = current.next
         
         return "\n".join(output)
     
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self):
         """Obtiene estadísticas de la ACL"""
+        total_rules = self.rules.get_size()
+        active_rules = 0
+        permit_rules = 0
+        deny_rules = 0
+        
+        current = self.rules.head
+        while current is not None:
+            rule = current.data
+            if rule.is_active:
+                active_rules += 1
+            if rule.action == "permit":
+                permit_rules += 1
+            elif rule.action == "deny":
+                deny_rules += 1
+            current = current.next
+        
         return {
             "name": self.name,
             "type": self.acl_type,
-            "total_rules": len(self.rules),
-            "active_rules": len([r for r in self.rules if r.is_active]),
-            "permit_rules": len([r for r in self.rules if r.action == "permit"]),
-            "deny_rules": len([r for r in self.rules if r.action == "deny"]),
+            "total_rules": total_rules,
+            "active_rules": active_rules,
+            "permit_rules": permit_rules,
+            "deny_rules": deny_rules,
             "is_active": self.is_active
         }
 
@@ -161,62 +187,90 @@ class FirewallManager:
     """Gestor principal de firewall"""
     
     def __init__(self):
-        self.acls: Dict[str, FirewallACL] = {}
-        self.active_acls: List[str] = []
-        self.security_log: List[Dict[str, Any]] = []
+        self.acls = LinkedList()  # Lista de ACLs (simulando diccionario)
+        self.active_acls = LinkedList()  # Lista de ACLs activas (simulando lista)
+        self.security_log = LinkedList()  # Lista de eventos de seguridad (simulando lista)
         self._log_counter = 1
     
-    def create_acl(self, name: str, acl_type: str = "extended") -> bool:
+    def _find_acl_by_name(self, name):
+        """Busca una ACL por nombre"""
+        current = self.acls.head
+        while current is not None:
+            if current.data.name == name:
+                return current.data
+            current = current.next
+        return None
+    
+    def create_acl(self, name, acl_type="extended"):
         """Crea una nueva ACL"""
-        if name in self.acls:
+        if self._find_acl_by_name(name):
             return False
         
-        self.acls[name] = FirewallACL(name, acl_type)
+        new_acl = FirewallACL(name, acl_type)
+        self.acls.add_node(new_acl)
         return True
     
-    def delete_acl(self, name: str) -> bool:
+    def delete_acl(self, name):
         """Elimina una ACL"""
-        if name in self.acls:
-            del self.acls[name]
-            if name in self.active_acls:
-                self.active_acls.remove(name)
+        acl = self._find_acl_by_name(name)
+        if acl:
+            self.acls.remove_node(acl)
+            # Remover de ACLs activas si está ahí
+            current = self.active_acls.head
+            while current is not None:
+                if current.data == name:
+                    self.active_acls.remove_node(current.data)
+                    break
+                current = current.next
             return True
         return False
     
-    def get_acl(self, name: str) -> Optional[FirewallACL]:
+    def get_acl(self, name):
         """Obtiene una ACL por nombre"""
-        return self.acls.get(name)
+        return self._find_acl_by_name(name)
     
-    def activate_acl(self, name: str) -> bool:
+    def activate_acl(self, name):
         """Activa una ACL"""
-        if name in self.acls and name not in self.active_acls:
-            self.active_acls.append(name)
+        if self._find_acl_by_name(name):
+            # Verificar si ya está activa
+            current = self.active_acls.head
+            while current is not None:
+                if current.data == name:
+                    return False  # Ya está activa
+                current = current.next
+            self.active_acls.add_node(name)
             return True
         return False
     
-    def deactivate_acl(self, name: str) -> bool:
+    def deactivate_acl(self, name):
         """Desactiva una ACL"""
-        if name in self.active_acls:
-            self.active_acls.remove(name)
-            return True
+        current = self.active_acls.head
+        while current is not None:
+            if current.data == name:
+                self.active_acls.remove_node(current.data)
+                return True
+            current = current.next
         return False
     
-    def evaluate_packet(self, packet: Any) -> tuple[bool, Optional[FirewallRule], Optional[str]]:
+    def evaluate_packet(self, packet):
         """Evalúa un paquete contra todas las ACLs activas"""
-        for acl_name in self.active_acls:
-            acl = self.acls.get(acl_name)
+        current = self.active_acls.head
+        while current is not None:
+            acl_name = current.data
+            acl = self._find_acl_by_name(acl_name)
             if acl:
                 permitted, matched_rule = acl.evaluate_packet(packet)
                 if not permitted:
                     self._log_security_event(packet, "DENIED", acl_name, matched_rule)
                     return False, matched_rule, acl_name
+            current = current.next
         
         # Si pasa todas las ACLs, está permitido
         self._log_security_event(packet, "PERMITTED", None, None)
         return True, None, None
     
-    def _log_security_event(self, packet: Any, action: str, acl_name: str = None, 
-                           rule: FirewallRule = None):
+    def _log_security_event(self, packet, action, acl_name=None, 
+                           rule=None):
         """Registra un evento de seguridad"""
         try:
             log_entry = {
@@ -229,21 +283,22 @@ class FirewallManager:
                 "rule_id": rule.id if rule else None,
                 "packet_id": getattr(packet, 'id', 'unknown')
             }
-            self.security_log.append(log_entry)
+            self.security_log.add_node(log_entry)
             self._log_counter += 1
         except:
             pass
     
-    def show_security_log(self, max_entries: int = 50) -> str:
+    def show_security_log(self, max_entries=50):
         """Muestra el log de seguridad"""
-        if not self.security_log:
+        if self.security_log.is_empty():
             return "No hay eventos de seguridad registrados"
         
         output = ["SECURITY LOG - Firewall Events"]
         output.append("-" * 80)
         
-        # Mostrar los eventos más recientes
-        recent_logs = self.security_log[-max_entries:]
+        # Obtener todos los logs y mostrar los más recientes
+        all_logs = self.security_log.traverse()
+        recent_logs = all_logs[-max_entries:] if len(all_logs) > max_entries else all_logs
         
         for log in recent_logs:
             timestamp = log["timestamp"].strftime("%H:%M:%S")
@@ -253,22 +308,37 @@ class FirewallManager:
         
         return "\n".join(output)
     
-    def clear_security_log(self) -> int:
+    def clear_security_log(self):
         """Limpia el log de seguridad"""
-        count = len(self.security_log)
+        count = self.security_log.get_size()
         self.security_log.clear()
         return count
     
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self):
         """Obtiene estadísticas del firewall"""
-        total_denied = len([log for log in self.security_log if log["action"] == "DENIED"])
-        total_permitted = len([log for log in self.security_log if log["action"] == "PERMITTED"])
+        total_denied = 0
+        total_permitted = 0
+        
+        current = self.security_log.head
+        while current is not None:
+            log = current.data
+            if log["action"] == "DENIED":
+                total_denied += 1
+            elif log["action"] == "PERMITTED":
+                total_permitted += 1
+            current = current.next
+        
+        total_rules = 0
+        current = self.acls.head
+        while current is not None:
+            total_rules += current.data.rules.get_size()
+            current = current.next
         
         return {
-            "total_acls": len(self.acls),
-            "active_acls": len(self.active_acls),
-            "total_rules": sum(len(acl.rules) for acl in self.acls.values()),
-            "security_events": len(self.security_log),
+            "total_acls": self.acls.get_size(),
+            "active_acls": self.active_acls.get_size(),
+            "total_rules": total_rules,
+            "security_events": self.security_log.get_size(),
             "packets_denied": total_denied,
             "packets_permitted": total_permitted
         } 

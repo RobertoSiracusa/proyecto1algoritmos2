@@ -38,17 +38,17 @@ class CLIModeManager:
     # Comandos disponibles por modo
     AVAILABLE_COMMANDS = {
         CLIMode.USER: [
-            'show', 'help', 'enable', 'exit'
+            'show', 'help', 'enable', 'exit', 'select', 'current'
         ],
         CLIMode.PRIVILEGED: [
             'show', 'help', 'configure', 'send', 'tick', 'process', 
-            'exit', 'disable'
+            'exit', 'disable', 'select', 'current'
         ],
         CLIMode.GLOBAL_CONFIG: [
-            'hostname', 'interface', 'exit', 'end', 'help'
+            'hostname', 'interface', 'exit', 'end', 'help', 'select', 'current'
         ],
         CLIMode.INTERFACE_CONFIG: [
-            'ip', 'shutdown', 'no', 'exit', 'end', 'help'
+            'ip', 'shutdown', 'no', 'exit', 'end', 'help', 'select', 'current'
         ]
     }
     
@@ -141,6 +141,8 @@ class CLIModeManager:
             CLIMode.USER: """
 Comandos disponibles en Modo Usuario:
   show          - Mostrar información del sistema
+  select        - Seleccionar dispositivo específico
+  current       - Mostrar dispositivo actual
   help          - Mostrar esta ayuda
   enable        - Entrar al modo privilegiado
   exit          - Salir del CLI
@@ -148,6 +150,8 @@ Comandos disponibles en Modo Usuario:
             CLIMode.PRIVILEGED: """
 Comandos disponibles en Modo Privilegiado:
   show          - Mostrar información del sistema
+  select        - Seleccionar dispositivo específico
+  current       - Mostrar dispositivo actual
   configure     - Entrar al modo de configuración
   send          - Enviar paquete de red
   tick          - Procesar un tick del simulador
@@ -160,6 +164,8 @@ Comandos disponibles en Modo Privilegiado:
 Comandos disponibles en Modo Configuración Global:
   hostname      - Configurar nombre del dispositivo
   interface     - Entrar a configuración de interfaz
+  select        - Seleccionar dispositivo específico
+  current       - Mostrar dispositivo actual
   help          - Mostrar esta ayuda
   exit          - Volver al modo anterior
   end           - Volver al modo privilegiado
@@ -169,6 +175,8 @@ Comandos disponibles en Modo Configuración de Interfaz:
   ip address    - Configurar dirección IP
   shutdown      - Apagar interfaz
   no shutdown   - Encender interfaz
+  select        - Seleccionar dispositivo específico
+  current       - Mostrar dispositivo actual
   help          - Mostrar esta ayuda
   exit          - Volver al modo anterior
   end           - Volver al modo privilegiado

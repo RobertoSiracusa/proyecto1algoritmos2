@@ -1,4 +1,3 @@
-from typing import Optional, List, Dict, Tuple
 import sys
 import os
 
@@ -9,20 +8,21 @@ from .packet import Packet
 from Devices_Network.network import Network
 from Devices_Network.device import Device
 from Devices_Network.interface import Interface
+from DataEstructures.linked_list import LinkedList
 
 
 class CommunicationManager:
     """Gestor de comunicaciones de paquetes en la red"""
     
-    def __init__(self, network: Network):
+    def __init__(self, network):
         self.network = network
-        self.packetHistory: List[Packet] = []  # Historial de todos los paquetes
-        self.activePackets: List[Packet] = []  # Paquetes actualmente en tránsito
-        self.deliveredPackets: List[Packet] = []  # Paquetes entregados
-        self.droppedPackets: List[Packet] = []  # Paquetes descartados
+        self.packetHistory = LinkedList()  # Historial de todos los paquetes
+        self.activePackets = LinkedList()  # Paquetes actualmente en tránsito
+        self.deliveredPackets = LinkedList()  # Paquetes entregados
+        self.droppedPackets = LinkedList()  # Paquetes descartados
         self.tickCount = 0  # Contador de ticks de procesamiento
     
-    def send(self, sourceIp: str, destinationIp: str, content: str, ttl: int = 64) -> Optional[Packet]:
+    def send(self, sourceIp, destinationIp, content, ttl=64):
         """
         Comando SEND: Crea un paquete y lo coloca en la cola de salida del dispositivo fuente
         """
@@ -59,8 +59,8 @@ class CommunicationManager:
         packet.addToTrace(sourceDevice.name)
         
         # Agregar a listas de seguimiento
-        self.packetHistory.append(packet)
-        self.activePackets.append(packet)
+        self.packetHistory.add_node(packet)
+        self.activePackets.add_node(packet)
         
         # Colocar en la cola de salida de la interfaz fuente
         success = sourceInterface.addPacketToQueue(packet)
@@ -73,7 +73,7 @@ class CommunicationManager:
             self._moveToDropped(packet)
             return None
     
-    def tick(self) -> Dict[str, int]:
+    def tick(self):
         """
         Comando TICK/PROCESS: Procesa todas las colas y maneja el enrutamiento de paquetes
         """
@@ -178,15 +178,22 @@ class CommunicationManager:
         
         return stats
     
-    def _extractPacketsFromQueues(self) -> List[Tuple[Packet, Device, Interface]]:
+    def _extractPacketsFromQueues(self):
         """Extrae todos los paquetes Packet de las colas de interfaces"""
         packetsToProcess = []
         
-        for deviceName, device in self.network.devices.items():
+        # Iterar sobre la LinkedList de dispositivos
+        current = self.network.devices.head
+        while current:
+            device = current.data
             if device.isOffline():
+                current = current.next
                 continue
                 
-            for interface in device.interfaces:
+            # Iterar sobre la LinkedList de interfaces
+            interface_current = device.interfaces.head
+            while interface_current:
+                interface = interface_current.data
                 if not interface.isUp() or not interface.isConnected():
                     continue
                 
@@ -205,32 +212,48 @@ class CommunicationManager:
                 # Reencolar items no-paquetes
                 for item in tempQueue:
                     packetQueue.enqueue(item)
+                
+                interface_current = interface_current.next
+            
+            current = current.next
         
         return packetsToProcess
     
-    def _findDeviceByIp(self, ip: str) -> Optional[Device]:
+    def _findDeviceByIp(self, ip):
         """Encuentra un dispositivo que tenga una interfaz con la IP especificada"""
-        for deviceName, device in self.network.devices.items():
-            for interface in device.interfaces:
+        current = self.network.devices.head
+        while current:
+            device = current.data
+            interface_current = device.interfaces.head
+            while interface_current:
+                interface = interface_current.data
                 if interface.ipAddress == ip:
                     return device
+                interface_current = interface_current.next
+            current = current.next
         return None
     
-    def _findInterfaceByIp(self, device: Device, ip: str) -> Optional[Interface]:
+    def _findInterfaceByIp(self, device, ip):
         """Encuentra una interfaz en un dispositivo con la IP especificada"""
-        for interface in device.interfaces:
+        interface_current = device.interfaces.head
+        while interface_current:
+            interface = interface_current.data
             if interface.ipAddress == ip:
                 return interface
+            interface_current = interface_current.next
         return None
     
-    def _isDestinationReached(self, packet: Packet, currentDevice: Device) -> bool:
+    def _isDestinationReached(self, packet, currentDevice):
         """Verifica si el paquete llegó a su destino"""
-        for interface in currentDevice.interfaces:
+        interface_current = currentDevice.interfaces.head
+        while interface_current:
+            interface = interface_current.data
             if interface.ipAddress == packet.destinationIp:
                 return True
+            interface_current = interface_current.next
         return False
     
-    def _determineNextHop(self, packet: Packet, currentDevice: Device, currentInterface: Interface) -> Tuple[Optional[Device], Optional[Interface]]:
+    def _determineNextHop(self, packet, currentDevice, currentInterface):
         """
         Determina el siguiente salto basado en la topología de red.
         Implementación básica: usa la primera interfaz conectada disponible.
@@ -240,68 +263,104 @@ class CommunicationManager:
             connectedInterface = currentInterface.connectedTo
             
             # Buscar el dispositivo propietario de la interfaz conectada
-            for deviceName, device in self.network.devices.items():
+            current = self.network.devices.head
+            while current:
+                device = current.data
                 if device.isOnline():
-                    for interface in device.interfaces:
+                    interface_current = device.interfaces.head
+                    while interface_current:
+                        interface = interface_current.data
                         if interface == connectedInterface:
                             return device, interface
+                        interface_current = interface_current.next
+                current = current.next
         
         # Buscar alternativas en otras interfaces del dispositivo actual
-        for interface in currentDevice.interfaces:
+        interface_current = currentDevice.interfaces.head
+        while interface_current:
+            interface = interface_current.data
             if interface != currentInterface and interface.isUp() and interface.isConnected():
                 connectedInterface = interface.connectedTo
                 
                 # Buscar el dispositivo propietario
-                for deviceName, device in self.network.devices.items():
+                current = self.network.devices.head
+                while current:
+                    device = current.data
                     if device.isOnline():
-                        for deviceInterface in device.interfaces:
+                        device_interface_current = device.interfaces.head
+                        while device_interface_current:
+                            deviceInterface = device_interface_current.data
                             if deviceInterface == connectedInterface:
                                 return device, deviceInterface
+                            device_interface_current = device_interface_current.next
+                    current = current.next
+            interface_current = interface_current.next
         
         return None, None
     
-    def _findBestForwardingInterface(self, device: Device, packet: Packet) -> Optional[Interface]:
+    def _findBestForwardingInterface(self, device, packet):
         """
         Encuentra la mejor interfaz de salida para reenviar un paquete
         """
         # Lógica simple: buscar una interfaz conectada que no sea la de entrada
-        for interface in device.interfaces:
+        interface_current = device.interfaces.head
+        while interface_current:
+            interface = interface_current.data
             if interface.isUp() and interface.isConnected():
                 # Verificar que no sea la interfaz por donde llegó el paquete
                 connectedDevice = self._getConnectedDevice(interface)
-                if connectedDevice and connectedDevice.name not in packet.pathTrace[-2:]:
+                # Obtener los últimos 2 elementos del pathTrace
+                path_list = []
+                current = packet.pathTrace.head
+                while current:
+                    path_list.append(current.data)
+                    current = current.next
+                
+                if connectedDevice and connectedDevice.name not in path_list[-2:]:
                     return interface
+            interface_current = interface_current.next
         
         # Si no encuentra una interfaz ideal, usar cualquier interfaz conectada
-        for interface in device.interfaces:
+        interface_current = device.interfaces.head
+        while interface_current:
+            interface = interface_current.data
             if interface.isUp() and interface.isConnected():
                 return interface
+            interface_current = interface_current.next
         
         return None
     
-    def _getConnectedDevice(self, interface: Interface) -> Optional[Device]:
+    def _getConnectedDevice(self, interface):
         """Obtiene el dispositivo conectado a una interfaz"""
         if not interface.isConnected():
             return None
         
         connectedInterface = interface.connectedTo
-        for deviceName, device in self.network.devices.items():
-            for deviceInterface in device.interfaces:
+        current = self.network.devices.head
+        while current:
+            device = current.data
+            interface_current = device.interfaces.head
+            while interface_current:
+                deviceInterface = interface_current.data
                 if deviceInterface == connectedInterface:
                     return device
+                interface_current = interface_current.next
+            current = current.next
         return None
     
-    def _moveToDelivered(self, packet: Packet):
+    def _moveToDelivered(self, packet):
         """Mueve un paquete de activos a entregados"""
-        if packet in self.activePackets:
-            self.activePackets.remove(packet)
-        self.deliveredPackets.append(packet)
+        # Buscar y remover de activePackets
+        self.activePackets.remove_node(packet)
+        # Agregar a deliveredPackets
+        self.deliveredPackets.add_node(packet)
     
-    def _moveToDropped(self, packet: Packet):
+    def _moveToDropped(self, packet):
         """Mueve un paquete de activos a descartados"""
-        if packet in self.activePackets:
-            self.activePackets.remove(packet)
-        self.droppedPackets.append(packet)
+        # Buscar y remover de activePackets
+        self.activePackets.remove_node(packet)
+        # Agregar a droppedPackets
+        self.droppedPackets.add_node(packet)
     
     def showStatistics(self):
         """Muestra estadísticas completas de comunicación"""
@@ -309,42 +368,78 @@ class CommunicationManager:
         print(f"ESTADÍSTICAS DE COMUNICACIÓN")
         print(f"{'='*60}")
         print(f"Ticks procesados: {self.tickCount}")
-        print(f"Total de paquetes: {len(self.packetHistory)}")
-        print(f"Paquetes activos: {len(self.activePackets)}")
-        print(f"Paquetes entregados: {len(self.deliveredPackets)}")
-        print(f"Paquetes descartados: {len(self.droppedPackets)}")
+        print(f"Total de paquetes: {self.packetHistory.size}")
+        print(f"Paquetes activos: {self.activePackets.size}")
+        print(f"Paquetes entregados: {self.deliveredPackets.size}")
+        print(f"Paquetes descartados: {self.droppedPackets.size}")
         
-        if self.deliveredPackets:
+        if self.deliveredPackets.size > 0:
             print(f"\nPaquetes entregados exitosamente:")
-            for packet in self.deliveredPackets[-5:]:  # Últimos 5
+            # Mostrar últimos 5 paquetes entregados
+            delivered_list = []
+            current = self.deliveredPackets.head
+            while current:
+                delivered_list.append(current.data)
+                current = current.next
+            
+            for packet in delivered_list[-5:]:  # Últimos 5
                 print(f"  {packet.id}: {packet.sourceIp} -> {packet.destinationIp} ({packet.hops} hops)")
         
-        if self.droppedPackets:
+        if self.droppedPackets.size > 0:
             print(f"\nPaquetes descartados:")
-            for packet in self.droppedPackets[-5:]:  # Últimos 5
+            # Mostrar últimos 5 paquetes descartados
+            dropped_list = []
+            current = self.droppedPackets.head
+            while current:
+                dropped_list.append(current.data)
+                current = current.next
+            
+            for packet in dropped_list[-5:]:  # Últimos 5
                 print(f"  {packet.id}: {packet.sourceIp} -> {packet.destinationIp} (Reason: TTL expired or no route)")
         
-        if self.activePackets:
+        if self.activePackets.size > 0:
             print(f"\nPaquetes en tránsito:")
-            for packet in self.activePackets:
+            current = self.activePackets.head
+            while current:
+                packet = current.data
                 print(f"  {packet.id}: {packet.sourceIp} -> {packet.destinationIp} (TTL={packet.ttl})")
+                current = current.next
         
         print(f"{'='*60}")
     
-    def getPacketTrace(self, packetId: str) -> Optional[Dict]:
+    def getPacketTrace(self, packetId):
         """Obtiene el rastro completo de un paquete"""
-        for packet in self.packetHistory:
+        current = self.packetHistory.head
+        while current:
+            packet = current.data
             if packet.id == packetId:
                 return packet.getInfo()
+            current = current.next
         return None
     
-    def listActivePackets(self) -> List[Dict]:
+    def listActivePackets(self):
         """Lista todos los paquetes activos"""
-        return [packet.getInfo() for packet in self.activePackets]
+        active_list = []
+        current = self.activePackets.head
+        while current:
+            active_list.append(current.data.getInfo())
+            current = current.next
+        return active_list
     
     def clearHistory(self):
         """Limpia el historial de paquetes (mantiene activos)"""
-        self.deliveredPackets.clear()
-        self.droppedPackets.clear()
-        self.packetHistory = [packet for packet in self.packetHistory if packet.isActive()]
+        # Limpiar listas de paquetes entregados y descartados
+        self.deliveredPackets = LinkedList()
+        self.droppedPackets = LinkedList()
+        
+        # Mantener solo paquetes activos en el historial
+        new_history = LinkedList()
+        current = self.packetHistory.head
+        while current:
+            packet = current.data
+            if packet.isActive():
+                new_history.add_node(packet)
+            current = current.next
+        
+        self.packetHistory = new_history
         print("Historial de paquetes limpiado") 

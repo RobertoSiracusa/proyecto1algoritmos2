@@ -11,7 +11,9 @@ from .basic_commands import (
     HelpCommand,
     ExitCommand, 
     EnableCommand,
-    DisableCommand
+    DisableCommand,
+    SelectDeviceCommand,
+    ShowCurrentDeviceCommand
 )
 
 from .navigation_commands import (
@@ -93,6 +95,8 @@ __all__ = [
     'ExitCommand',
     'EnableCommand', 
     'DisableCommand',
+    'SelectDeviceCommand',
+    'ShowCurrentDeviceCommand',
     
     # Navigation commands
     'ConfigureTerminalCommand',

@@ -14,7 +14,6 @@ Version: 1.0
 
 import re
 import ipaddress
-from typing import Any, List, Optional, Union, Dict
 from enum import Enum
 
 
@@ -42,7 +41,7 @@ class DeviceStatus(Enum):
 
 class ValidationError(Exception):
     """Excepción personalizada para errores de validación"""
-    def __init__(self, message: str, field: Optional[str] = None, value: Any = None):
+    def __init__(self, message, field=None, value=None):
         self.message = message
         self.field = field
         self.value = value
@@ -58,7 +57,7 @@ class DataValidator:
     # === VALIDACIONES DE NOMBRES Y IDENTIFICADORES ===
     
     @staticmethod
-    def validate_device_name(name: str) -> bool:
+    def validate_device_name(name):
         """
         Valida el nombre de un dispositivo de red.
         
@@ -99,7 +98,7 @@ class DataValidator:
         return True
     
     @staticmethod
-    def validate_interface_name(name: str) -> bool:
+    def validate_interface_name(name):
         """
         Valida el nombre de una interfaz de red.
         
@@ -147,7 +146,7 @@ class DataValidator:
     # === VALIDACIONES DE DIRECCIONES DE RED ===
     
     @staticmethod
-    def validate_ip_address(ip: str, allow_empty: bool = False) -> bool:
+    def validate_ip_address(ip, allow_empty=False):
         """
         Valida una dirección IP v4.
         
@@ -178,7 +177,7 @@ class DataValidator:
             raise ValidationError(f"'{ip}' no es una dirección IP v4 válida", "ip_address", ip)
     
     @staticmethod
-    def validate_mac_address(mac: str, allow_empty: bool = False) -> bool:
+    def validate_mac_address(mac, allow_empty=False):
         """
         Valida una dirección MAC.
         
@@ -215,7 +214,7 @@ class DataValidator:
     # === VALIDACIONES DE ESTADOS Y TIPOS ===
     
     @staticmethod
-    def validate_device_type(device_type: str) -> bool:
+    def validate_device_type(device_type):
         """
         Valida el tipo de dispositivo.
         
@@ -242,7 +241,7 @@ class DataValidator:
         return True
     
     @staticmethod
-    def validate_device_status(status: str) -> bool:
+    def validate_device_status(status):
         """
         Valida el estado de un dispositivo.
         
@@ -269,7 +268,7 @@ class DataValidator:
         return True
     
     @staticmethod
-    def validate_interface_status(status: str) -> bool:
+    def validate_interface_status(status):
         """
         Valida el estado de una interfaz.
         
@@ -298,7 +297,7 @@ class DataValidator:
     # === VALIDACIONES DE PAQUETES Y COMUNICACIÓN ===
     
     @staticmethod
-    def validate_ttl(ttl: int) -> bool:
+    def validate_ttl(ttl):
         """
         Valida el valor TTL (Time To Live) de un paquete.
         
@@ -323,7 +322,7 @@ class DataValidator:
         return True
     
     @staticmethod
-    def validate_packet_content(content: str) -> bool:
+    def validate_packet_content(content):
         """
         Valida el contenido de un paquete.
         
@@ -347,7 +346,7 @@ class DataValidator:
     # === VALIDACIONES DE CONFIGURACIÓN Y ARCHIVOS ===
     
     @staticmethod
-    def validate_filename(filename: str) -> bool:
+    def validate_filename(filename):
         """
         Valida un nombre de archivo de configuración.
         
@@ -386,7 +385,7 @@ class DataValidator:
     # === VALIDACIONES DE DATOS CARGADOS ===
     
     @staticmethod
-    def validate_config_data(config_data: Dict) -> bool:
+    def validate_config_data(config_data):
         """
         Valida la estructura de datos de configuración cargada desde JSON.
         
@@ -436,7 +435,7 @@ class DataValidator:
     # === VALIDACIONES NUMÉRICAS ===
     
     @staticmethod
-    def validate_positive_integer(value: Any, field_name: str, max_value: Optional[int] = None) -> bool:
+    def validate_positive_integer(value, field_name, max_value=None):
         """
         Valida que un valor sea un entero positivo.
         
@@ -463,7 +462,7 @@ class DataValidator:
         return True
     
     @staticmethod
-    def validate_non_empty_string(value: Any, field_name: str, max_length: Optional[int] = None) -> bool:
+    def validate_non_empty_string(value, field_name, max_length=None):
         """
         Valida que un valor sea un string no vacío.
         
@@ -496,7 +495,7 @@ class InputValidator:
     """
     
     @staticmethod
-    def validate_cli_command(command: str) -> bool:
+    def validate_cli_command(command):
         """
         Valida un comando CLI.
         
@@ -527,7 +526,7 @@ class InputValidator:
         return True
     
     @staticmethod
-    def validate_cli_arguments(args: List[str], max_args: Optional[int] = None) -> bool:
+    def validate_cli_arguments(args, max_args=None):
         """
         Valida argumentos de comando CLI.
         
@@ -559,7 +558,7 @@ class InputValidator:
 
 # === FUNCIONES DE CONVENIENCIA ===
 
-def safe_validate(validator_func, *args, **kwargs) -> bool:
+def safe_validate(validator_func, *args, **kwargs):
     """
     Ejecuta una función de validación de forma segura, retornando False en lugar de lanzar excepción.
     
@@ -577,7 +576,7 @@ def safe_validate(validator_func, *args, **kwargs) -> bool:
         return False
 
 
-def get_validation_error_message(validator_func, *args, **kwargs) -> Optional[str]:
+def get_validation_error_message(validator_func, *args, **kwargs):
     """
     Ejecuta una función de validación y retorna el mensaje de error si falla.
     

@@ -1,10 +1,11 @@
-from typing import List, Optional, Dict, Any
 import sys
 import os
 import shlex
 
 # Agregar el directorio padre al path para importaciones
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from DataEstructures import LinkedList
 
 from .cli_modes import CLIMode, CLIModeManager, CLIModeContext
 from .command_base import Command, CommandResult, CommandRegistry
@@ -27,7 +28,7 @@ class CLIParser:
         """
         self.context = CLIModeContext(CLIMode.USER)
         self.command_registry = CommandRegistry()
-        self.history = []  # Historial de comandos
+        self.history = LinkedList()  # Historial de comandos usando LinkedList
         self.running = False
         
         # Referencias a componentes del sistema
@@ -54,6 +55,10 @@ class CLIParser:
         self.command_registry.register(ExitCommand())
         self.command_registry.register(EnableCommand())
         self.command_registry.register(DisableCommand())
+        
+        # ===== NUEVO: Comandos de selección de dispositivo =====
+        self.command_registry.register(SelectDeviceCommand())
+        self.command_registry.register(ShowCurrentDeviceCommand())
         
         # Comandos de navegación
         self.command_registry.register(ConfigureTerminalCommand())
@@ -140,7 +145,7 @@ class CLIParser:
             # Error de parseo (ej: comillas no cerradas)
             raise ValueError(f"Error en sintaxis del comando: {str(e)}")
     
-    def execute_command(self, command: str, args: List[str]) -> CommandResult:
+    def execute_command(self, command, args):
         """
         Ejecuta un comando con los argumentos dados
         
@@ -212,7 +217,7 @@ class CLIParser:
         """Obtiene el dispositivo actual"""
         return self.context.current_device
     
-    def validate_input(self, command_string: str) -> tuple:
+    def validate_input(self, command_string):
         """
         Valida la entrada del usuario y retorna errores si los hay
         
@@ -237,25 +242,33 @@ class CLIParser:
         
         return True, ""
     
-    def _add_to_history(self, command: str):
+    def _add_to_history(self, command):
         """Agrega un comando al historial"""
-        self.history.append(command)
-        if len(self.history) > self.max_history:
-            self.history.pop(0)
+        self.history.add_node(command)
+        if self.history.size > self.max_history:
+            # Remover el primer elemento (más antiguo)
+            if not self.history.is_empty():
+                self.history.remove_node(self.history.head.data)
     
-    def get_command_history(self) -> List[str]:
+    def get_command_history(self):
         """Obtiene el historial de comandos"""
-        return self.history.copy()
+        # Crear una lista Python para retornar (compatibilidad)
+        history_list = []
+        current = self.history.head
+        while current is not None:
+            history_list.append(current.data)
+            current = current.next
+        return history_list
     
     def clear_history(self):
         """Limpia el historial de comandos"""
-        self.history.clear()
+        self.history = LinkedList()
     
-    def get_available_commands(self) -> List[str]:
+    def get_available_commands(self):
         """Obtiene comandos disponibles para el modo actual"""
         return CLIModeManager.get_available_commands(self.context.current_mode)
     
-    def get_command_help(self, command_name: str) -> str:
+    def get_command_help(self, command_name):
         """
         Obtiene ayuda para un comando específico
         
@@ -271,7 +284,7 @@ class CLIParser:
         else:
             return f"Comando '{command_name}' no encontrado"
     
-    def auto_complete(self, partial_command: str) -> List[str]:
+    def auto_complete(self, partial_command):
         """
         Proporciona autocompletado para comandos
         
@@ -279,7 +292,7 @@ class CLIParser:
             partial_command: Comando parcial
             
         Returns:
-            List[str]: Lista de posibles comandos
+            Lista de posibles comandos
         """
         available_commands = self.get_available_commands()
         matches = []
@@ -368,7 +381,7 @@ Escriba 'enable' para entrar al modo privilegiado.
         finally:
             self.running = False
     
-    def execute_script(self, commands: List[str]) -> List[CommandResult]:
+    def execute_script(self, commands):
         """
         Ejecuta una lista de comandos (modo script)
         
@@ -376,7 +389,7 @@ Escriba 'enable' para entrar al modo privilegiado.
             commands: Lista de strings de comandos
             
         Returns:
-            List[CommandResult]: Resultados de cada comando
+            Lista de resultados de cada comando
         """
         results = []
         
@@ -402,7 +415,7 @@ Escriba 'enable' para entrar al modo privilegiado.
         
         return results
     
-    def get_status(self) -> Dict[str, Any]:
+    def get_status(self):
         """
         Obtiene el estado actual del CLI
         
@@ -413,7 +426,7 @@ Escriba 'enable' para entrar al modo privilegiado.
             'current_mode': self.context.current_mode.value,
             'current_device': self.context.current_device.name if self.context.current_device else None,
             'current_interface': self.context.current_interface.name if self.context.current_interface else None,
-            'command_history_count': len(self.history),
+            'command_history_count': self.history.size,
             'available_commands': self.get_available_commands(),
             'running': self.running
         } 

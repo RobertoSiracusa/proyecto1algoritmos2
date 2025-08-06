@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Optional
 import sys
 import os
 
 # Agregar el directorio padre al path para importaciones
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from DataEstructures import LinkedList
 
 
 class CommandResult:
@@ -12,7 +13,7 @@ class CommandResult:
     Resultado de la ejecución de un comando
     """
     
-    def __init__(self, success: bool, message: str = "", data: Any = None):
+    def __init__(self, success, message="", data=None):
         self.success = success
         self.message = message
         self.data = data
@@ -30,7 +31,7 @@ class Command(ABC):
     Todos los comandos CLI deben heredar de esta clase.
     """
     
-    def __init__(self, name: str, description: str, syntax: str = ""):
+    def __init__(self, name, description, syntax=""):
         """
         Inicializa el comando base
         
@@ -42,10 +43,10 @@ class Command(ABC):
         self.name = name
         self.description = description
         self.syntax = syntax
-        self.aliases = []  # Lista de alias para el comando
+        self.aliases = LinkedList()  # Lista de alias usando LinkedList
         
     @abstractmethod
-    def execute(self, args: List[str], context: 'CLIModeContext') -> CommandResult:
+    def execute(self, args, context):
         """
         Ejecuta el comando con los argumentos dados
         
@@ -58,7 +59,7 @@ class Command(ABC):
         """
         pass
     
-    def validate_args(self, args: List[str], min_args: int = 0, max_args: int = None) -> bool:
+    def validate_args(self, args, min_args=0, max_args=None):
         """
         Valida el número de argumentos
         
@@ -76,7 +77,7 @@ class Command(ABC):
             return False
         return True
     
-    def get_help(self) -> str:
+    def get_help(self):
         """
         Obtiene texto de ayuda para el comando
         
@@ -87,16 +88,27 @@ class Command(ABC):
         help_text += f"Descripción: {self.description}\n"
         if self.syntax:
             help_text += f"Sintaxis: {self.syntax}\n"
-        if self.aliases:
-            help_text += f"Alias: {', '.join(self.aliases)}\n"
+        if not self.aliases.is_empty():
+            # Convertir LinkedList a lista para join
+            alias_list = []
+            current = self.aliases.head
+            while current is not None:
+                alias_list.append(current.data)
+                current = current.next
+            help_text += f"Alias: {', '.join(alias_list)}\n"
         return help_text
     
-    def add_alias(self, alias: str):
+    def add_alias(self, alias):
         """Agrega un alias al comando"""
-        if alias not in self.aliases:
-            self.aliases.append(alias)
+        # Verificar si el alias ya existe
+        current = self.aliases.head
+        while current is not None:
+            if current.data == alias:
+                return  # Ya existe
+            current = current.next
+        self.aliases.add_node(alias)
     
-    def matches(self, command_name: str) -> bool:
+    def matches(self, command_name):
         """
         Verifica si el comando coincide con el nombre o algún alias
         
@@ -106,8 +118,16 @@ class Command(ABC):
         Returns:
             bool: True si coincide
         """
-        return (command_name.lower() == self.name.lower() or 
-                command_name.lower() in [alias.lower() for alias in self.aliases])
+        if command_name.lower() == self.name.lower():
+            return True
+        
+        # Verificar en aliases
+        current = self.aliases.head
+        while current is not None:
+            if command_name.lower() == current.data.lower():
+                return True
+            current = current.next
+        return False
 
 
 class CompositeCommand(Command):
@@ -115,19 +135,28 @@ class CompositeCommand(Command):
     Comando compuesto que puede contener subcomandos
     """
     
-    def __init__(self, name: str, description: str, syntax: str = ""):
+    def __init__(self, name, description, syntax=""):
         super().__init__(name, description, syntax)
-        self.subcommands: Dict[str, Command] = {}
+        self.subcommands = LinkedList()  # Lista de subcomandos usando LinkedList
         
-    def add_subcommand(self, subcommand: Command):
+    def _find_subcommand_by_name(self, name):
+        """Busca un subcomando por nombre"""
+        current = self.subcommands.head
+        while current is not None:
+            if current.data.name.lower() == name.lower():
+                return current.data
+            current = current.next
+        return None
+        
+    def add_subcommand(self, subcommand):
         """Agrega un subcomando"""
-        self.subcommands[subcommand.name.lower()] = subcommand
+        self.subcommands.add_node(subcommand)
         
-    def get_subcommand(self, name: str) -> Optional[Command]:
+    def get_subcommand(self, name):
         """Obtiene un subcomando por nombre"""
-        return self.subcommands.get(name.lower())
+        return self._find_subcommand_by_name(name)
         
-    def execute(self, args: List[str], context: 'CLIModeContext') -> CommandResult:
+    def execute(self, args, context):
         """
         Ejecuta el comando o subcomando apropiado
         """
@@ -140,16 +169,25 @@ class CompositeCommand(Command):
         if subcommand:
             return subcommand.execute(args[1:], context)
         else:
-            available = ', '.join(self.subcommands.keys())
+            # Obtener nombres de subcomandos disponibles
+            available_names = []
+            current = self.subcommands.head
+            while current is not None:
+                available_names.append(current.data.name)
+                current = current.next
+            available = ', '.join(available_names)
             return CommandResult(False, f"Subcomando '{subcommand_name}' no reconocido. Disponibles: {available}")
     
-    def get_help(self) -> str:
+    def get_help(self):
         """Obtiene ayuda incluyendo subcomandos"""
         help_text = super().get_help()
-        if self.subcommands:
+        if not self.subcommands.is_empty():
             help_text += "\nSubcomandos disponibles:\n"
-            for name, cmd in self.subcommands.items():
-                help_text += f"  {name:15} - {cmd.description}\n"
+            current = self.subcommands.head
+            while current is not None:
+                cmd = current.data
+                help_text += f"  {cmd.name:15} - {cmd.description}\n"
+                current = current.next
         return help_text
 
 
@@ -159,22 +197,34 @@ class CommandRegistry:
     """
     
     def __init__(self):
-        self.commands: Dict[str, Command] = {}
+        self.commands = LinkedList()  # Lista de comandos usando LinkedList
         
-    def register(self, command: Command):
+    def _find_command_by_name(self, name):
+        """Busca un comando por nombre"""
+        current = self.commands.head
+        while current is not None:
+            if current.data.name.lower() == name.lower():
+                return current.data
+            current = current.next
+        return None
+        
+    def register(self, command):
         """
         Registra un comando
         
         Args:
             command: Comando a registrar
         """
-        self.commands[command.name.lower()] = command
+        self.commands.add_node(command)
         
         # Registrar también los alias
-        for alias in command.aliases:
-            self.commands[alias.lower()] = command
+        current = command.aliases.head
+        while current is not None:
+            # Crear una entrada adicional para el alias
+            self.commands.add_node(command)
+            current = current.next
             
-    def get_command(self, name: str) -> Optional[Command]:
+    def get_command(self, name):
         """
         Obtiene un comando por nombre
         
@@ -184,18 +234,21 @@ class CommandRegistry:
         Returns:
             Command: Comando encontrado o None
         """
-        return self.commands.get(name.lower())
+        return self._find_command_by_name(name)
         
-    def get_all_commands(self) -> Dict[str, Command]:
+    def get_all_commands(self):
         """Obtiene todos los comandos registrados"""
         # Retornar solo los comandos principales (no alias)
         main_commands = {}
-        for name, cmd in self.commands.items():
-            if name == cmd.name.lower():
-                main_commands[name] = cmd
+        current = self.commands.head
+        while current is not None:
+            cmd = current.data
+            if cmd.name.lower() not in main_commands:
+                main_commands[cmd.name.lower()] = cmd
+            current = current.next
         return main_commands
         
-    def get_commands_for_mode(self, mode: 'CLIMode') -> Dict[str, Command]:
+    def get_commands_for_mode(self, mode):
         """
         Obtiene comandos disponibles para un modo específico
         
@@ -203,7 +256,7 @@ class CommandRegistry:
             mode: Modo CLI
             
         Returns:
-            Dict[str, Command]: Comandos disponibles
+            Dict: Comandos disponibles
         """
         from .cli_modes import CLIModeManager
         available_command_names = CLIModeManager.get_available_commands(mode)

@@ -1,21 +1,26 @@
 import uuid
-from typing import List
+import sys
+import os
+
+# Agregar el directorio padre al path para importar DataEstructures
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from DataEstructures import LinkedList
 
 
 class Packet:
     """Clase que representa un paquete de red"""
     
-    def __init__(self, sourceIp: str, destinationIp: str, content: str, ttl: int = 64):
+    def __init__(self, sourceIp, destinationIp, content, ttl=64):
         self.id = str(uuid.uuid4())[:8]  # Identificador único (8 caracteres)
         self.sourceIp = sourceIp
         self.destinationIp = destinationIp
         self.content = content
         self.ttl = ttl  # Time To Live
-        self.pathTrace: List[str] = []  # Lista de nodos traversados
+        self.pathTrace = LinkedList()  # Lista enlazada de nodos traversados
         self.hops = 0  # Contador de saltos
         self.status = "active"  # "active", "delivered", "expired", "dropped"
     
-    def decrementTtl(self) -> bool:
+    def decrementTtl(self):
         """Decrementa TTL y retorna True si el paquete sigue siendo válido"""
         self.ttl -= 1
         if self.ttl <= 0:
@@ -23,9 +28,9 @@ class Packet:
             return False
         return True
     
-    def addToTrace(self, deviceName: str):
+    def addToTrace(self, deviceName):
         """Agrega el dispositivo actual al rastro del path"""
-        self.pathTrace.append(deviceName)
+        self.pathTrace.add_node(deviceName)
         self.hops += 1
         print(f"Packet {self.id}: Passed through {deviceName} (Hop {self.hops}, TTL={self.ttl})")
     
@@ -34,22 +39,23 @@ class Packet:
         self.status = "delivered"
         print(f"Packet {self.id}: DELIVERED to {self.destinationIp}")
     
-    def markDropped(self, reason: str = "Unknown"):
+    def markDropped(self, reason="Unknown"):
         """Marca el paquete como descartado"""
         self.status = "dropped"
         print(f"Packet {self.id}: DROPPED - {reason}")
     
-    def getPathString(self) -> str:
+    def getPathString(self):
         """Retorna el path como string legible"""
-        if not self.pathTrace:
+        if self.pathTrace.is_empty():
             return "No path traced"
-        return " -> ".join(self.pathTrace)
+        path_elements = self.pathTrace.traverse()
+        return " -> ".join(path_elements)
     
-    def isActive(self) -> bool:
+    def isActive(self):
         """Verifica si el paquete está activo (no expirado ni entregado)"""
         return self.status == "active"
     
-    def getInfo(self) -> dict:
+    def getInfo(self):
         """Retorna información completa del paquete"""
         return {
             'id': self.id,
@@ -59,7 +65,7 @@ class Packet:
             'ttl': self.ttl,
             'hops': self.hops,
             'status': self.status,
-            'pathTrace': self.pathTrace,
+            'pathTrace': self.pathTrace.traverse(),
             'pathString': self.getPathString()
         }
     

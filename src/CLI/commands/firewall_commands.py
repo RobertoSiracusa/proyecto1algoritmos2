@@ -1,5 +1,4 @@
 from ..command_base import Command
-from typing import List
 
 class CreateACLCommand(Command):
     """Comando para crear una ACL"""
@@ -8,16 +7,16 @@ class CreateACLCommand(Command):
         super().__init__(
             name="access-list",
             description="Crear una Access Control List",
-            usage="access-list <name> <type>",
-            examples=[
-                "access-list INBOUND extended",
-                "access-list OUTBOUND standard"
-            ]
+            syntax="access-list <name> <type>"
         )
     
-    def execute(self, args: List[str], current_device, network) -> str:
+    def execute(self, args, context):
         if len(args) < 2:
             return "❌ Uso: access-list <name> <type>"
+        
+        current_device = context.current_device
+        if not current_device:
+            return "❌ No hay dispositivo seleccionado"
         
         acl_name = args[0]
         acl_type = args[1].lower()
@@ -37,16 +36,16 @@ class AddFirewallRuleCommand(Command):
         super().__init__(
             name="access-list-rule",
             description="Agregar regla a una ACL",
-            usage="access-list-rule <acl_name> <action> <protocol> <source> <destination> [description]",
-            examples=[
-                "access-list-rule INBOUND permit ip 192.168.1.0 0.0.0.255 any",
-                "access-list-rule OUTBOUND deny tcp any 10.0.0.1 0.0.0.0 'Block specific host'"
-            ]
+            syntax="access-list-rule <acl_name> <action> <protocol> <source> <destination> [description]"
         )
     
-    def execute(self, args: List[str], current_device, network) -> str:
+    def execute(self, args, context):
         if len(args) < 5:
             return "❌ Uso: access-list-rule <acl_name> <action> <protocol> <source> <destination> [description]"
+        
+        current_device = context.current_device
+        if not current_device:
+            return "❌ No hay dispositivo seleccionado"
         
         acl_name = args[0]
         action = args[1].lower()
@@ -78,14 +77,14 @@ class ShowACLCommand(Command):
         super().__init__(
             name="show access-list",
             description="Mostrar Access Control Lists",
-            usage="show access-list [acl_name]",
-            examples=[
-                "show access-list",
-                "show access-list INBOUND"
-            ]
+            syntax="show access-list [acl_name]"
         )
     
-    def execute(self, args: List[str], current_device, network) -> str:
+    def execute(self, args, context):
+        current_device = context.current_device
+        if not current_device:
+            return "❌ No hay dispositivo seleccionado"
+        
         acl_name = args[0] if args else None
         return current_device.show_acl(acl_name)
 
@@ -96,16 +95,16 @@ class ActivateACLCommand(Command):
         super().__init__(
             name="activate-acl",
             description="Activar una Access Control List",
-            usage="activate-acl <acl_name>",
-            examples=[
-                "activate-acl INBOUND",
-                "activate-acl OUTBOUND"
-            ]
+            syntax="activate-acl <acl_name>"
         )
     
-    def execute(self, args: List[str], current_device, network) -> str:
+    def execute(self, args, context):
         if len(args) < 1:
             return "❌ Uso: activate-acl <acl_name>"
+        
+        current_device = context.current_device
+        if not current_device:
+            return "❌ No hay dispositivo seleccionado"
         
         acl_name = args[0]
         
@@ -121,14 +120,14 @@ class ShowSecurityLogCommand(Command):
         super().__init__(
             name="show security-log",
             description="Mostrar log de seguridad del firewall",
-            usage="show security-log [max_entries]",
-            examples=[
-                "show security-log",
-                "show security-log 20"
-            ]
+            syntax="show security-log [max_entries]"
         )
     
-    def execute(self, args: List[str], current_device, network) -> str:
+    def execute(self, args, context):
+        current_device = context.current_device
+        if not current_device:
+            return "❌ No hay dispositivo seleccionado"
+        
         max_entries = int(args[0]) if args else 50
         return current_device.show_security_log(max_entries)
 
@@ -139,12 +138,13 @@ class ClearSecurityLogCommand(Command):
         super().__init__(
             name="clear security-log",
             description="Limpiar log de seguridad del firewall",
-            usage="clear security-log",
-            examples=[
-                "clear security-log"
-            ]
+            syntax="clear security-log"
         )
     
-    def execute(self, args: List[str], current_device, network) -> str:
+    def execute(self, args, context):
+        current_device = context.current_device
+        if not current_device:
+            return "❌ No hay dispositivo seleccionado"
+        
         count = current_device.clear_security_log()
         return f"✅ Log de seguridad limpiado. {count} entradas eliminadas." 

@@ -22,26 +22,13 @@ Version: 1.0
 Date: 2025
 """
 
-from typing import Any, Optional, Iterator, List
-import sys
-import os
-
-# Importar validaciones si están disponibles
-try:
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from core.validators import ValidationError, DataValidator
-    VALIDATORS_AVAILABLE = True
-except ImportError:
-    VALIDATORS_AVAILABLE = False
-    ValidationError = Exception
-
 
 class StackEmptyError(Exception):
     """
     Excepción personalizada lanzada cuando se intenta realizar operaciones
     en una pila vacía que requieren elementos.
     """
-    def __init__(self, operation: str):
+    def __init__(self, operation):
         self.operation = operation
         super().__init__(f"No se puede realizar '{operation}' en una pila vacía")
 
@@ -51,7 +38,7 @@ class StackFullError(Exception):
     Excepción personalizada lanzada cuando se excede la capacidad máxima
     de la pila (si está configurada).
     """
-    def __init__(self, max_capacity: int):
+    def __init__(self, max_capacity):
         self.max_capacity = max_capacity
         super().__init__(f"La pila ha alcanzado su capacidad máxima de {max_capacity} elementos")
 
@@ -68,41 +55,39 @@ class Stack:
     - Solo se puede acceder al elemento del tope (peek)
     
     Attributes:
-        _items (List[Any]): Lista interna que almacena los elementos de la pila
-        _max_capacity (Optional[int]): Capacidad máxima de la pila (None = ilimitada)
-        _creation_count (int): Contador de elementos agregados durante la vida de la pila
+        _items: Lista interna que almacena los elementos de la pila
+        _max_capacity: Capacidad máxima de la pila (None = ilimitada)
+        _creation_count: Contador de elementos agregados durante la vida de la pila
     """
     
-    def __init__(self, max_capacity: Optional[int] = None):
+    def __init__(self, max_capacity=None):
         """
         Inicializa una nueva pila vacía.
         
         Args:
-            max_capacity (Optional[int]): Capacidad máxima de elementos. 
-                                        Si es None, la pila no tiene límite.
-                                        Debe ser un entero positivo si se especifica.
+            max_capacity: Capacidad máxima de elementos. 
+                        Si es None, la pila no tiene límite.
+                        Debe ser un entero positivo si se especifica.
         
         Raises:
-            ValidationError: Si max_capacity no es un entero positivo válido
+            ValueError: Si max_capacity no es un entero positivo válido
         """
         # Validar capacidad máxima si se proporciona
         if max_capacity is not None:
-            if VALIDATORS_AVAILABLE:
-                DataValidator.validate_positive_integer(max_capacity, "max_capacity")
-            elif not isinstance(max_capacity, int) or max_capacity <= 0:
+            if not isinstance(max_capacity, int) or max_capacity <= 0:
                 raise ValueError("max_capacity debe ser un entero positivo")
         
         # Atributos privados (encapsulación)
-        self._items: List[Any] = []
-        self._max_capacity: Optional[int] = max_capacity
-        self._creation_count: int = 0  # Estadística útil para debugging
+        self._items = []
+        self._max_capacity = max_capacity
+        self._creation_count = 0  # Estadística útil para debugging
     
-    def push(self, item: Any) -> None:
+    def push(self, item):
         """
         Agrega un elemento al tope de la pila.
         
         Args:
-            item (Any): Elemento a agregar al tope de la pila. Puede ser de cualquier tipo.
+            item: Elemento a agregar al tope de la pila. Puede ser de cualquier tipo.
         
         Raises:
             StackFullError: Si la pila ha alcanzado su capacidad máxima
@@ -122,12 +107,12 @@ class Stack:
         self._items.append(item)
         self._creation_count += 1
     
-    def pop(self) -> Any:
+    def pop(self):
         """
         Remueve y retorna el elemento del tope de la pila.
         
         Returns:
-            Any: El elemento que estaba en el tope de la pila
+            El elemento que estaba en el tope de la pila
         
         Raises:
             StackEmptyError: Si la pila está vacía
@@ -145,7 +130,7 @@ class Stack:
         # Remover y retornar el último elemento (tope)
         return self._items.pop()
     
-    def peek(self) -> Any:
+    def peek(self):
         """
         Retorna el elemento del tope de la pila sin removerlo.
         
@@ -153,7 +138,7 @@ class Stack:
         modificar el estado de la pila.
         
         Returns:
-            Any: El elemento del tope de la pila
+            El elemento del tope de la pila
         
         Raises:
             StackEmptyError: Si la pila está vacía
@@ -173,7 +158,7 @@ class Stack:
         # Retornar el último elemento sin removerlo
         return self._items[-1]
     
-    def is_empty(self) -> bool:
+    def is_empty(self):
         """
         Verifica si la pila está vacía.
         
@@ -190,7 +175,7 @@ class Stack:
         """
         return len(self._items) == 0
     
-    def size(self) -> int:
+    def size(self):
         """
         Retorna el número actual de elementos en la pila.
         
@@ -208,7 +193,7 @@ class Stack:
         """
         return len(self._items)
     
-    def clear(self) -> None:
+    def clear(self):
         """
         Remueve todos los elementos de la pila, dejándola vacía.
         
@@ -225,27 +210,27 @@ class Stack:
         """
         self._items.clear()
     
-    def get_capacity(self) -> Optional[int]:
+    def get_capacity(self):
         """
         Retorna la capacidad máxima configurada para la pila.
         
         Returns:
-            Optional[int]: Capacidad máxima de la pila, o None si es ilimitada
+            Capacidad máxima de la pila, o None si es ilimitada
         """
         return self._max_capacity
     
-    def get_remaining_capacity(self) -> Optional[int]:
+    def get_remaining_capacity(self):
         """
         Retorna la cantidad de elementos que aún se pueden agregar a la pila.
         
         Returns:
-            Optional[int]: Espacios disponibles, o None si la capacidad es ilimitada
+            Espacios disponibles, o None si la capacidad es ilimitada
         """
         if self._max_capacity is None:
             return None
         return self._max_capacity - len(self._items)
     
-    def is_full(self) -> bool:
+    def is_full(self):
         """
         Verifica si la pila ha alcanzado su capacidad máxima.
         
@@ -257,7 +242,7 @@ class Stack:
             return False
         return len(self._items) >= self._max_capacity
     
-    def getAll(self) -> List[Any]:
+    def getAll(self):
         """
         Retorna una copia de todos los elementos en la pila manteniendo el orden LIFO.
         
@@ -265,7 +250,7 @@ class Stack:
         Esta operación no modifica la pila original.
         
         Returns:
-            List[Any]: Lista con copia de todos los elementos, tope primero
+            Lista con copia de todos los elementos, tope primero
             
         Example:
             >>> stack = Stack()
@@ -278,12 +263,12 @@ class Stack:
         # Retornar copia en orden inverso (tope primero)
         return self._items[::-1]
     
-    def search(self, item: Any) -> int:
+    def search(self, item):
         """
         Busca un elemento en la pila y retorna su posición desde el tope.
         
         Args:
-            item (Any): Elemento a buscar en la pila
+            item: Elemento a buscar en la pila
         
         Returns:
             int: Posición del elemento desde el tope (0 = tope), o -1 si no se encuentra
@@ -308,7 +293,7 @@ class Stack:
         except ValueError:
             return -1
     
-    def get_creation_count(self) -> int:
+    def get_creation_count(self):
         """
         Retorna el número total de elementos que han sido agregados a la pila
         durante su existencia (incluyendo los que han sido removidos).
@@ -320,7 +305,7 @@ class Stack:
     
     # === MÉTODOS ESPECIALES (DUNDER METHODS) ===
     
-    def __len__(self) -> int:
+    def __len__(self):
         """
         Permite usar len() con la pila.
         
@@ -335,12 +320,12 @@ class Stack:
         """
         return len(self._items)
     
-    def __iter__(self) -> Iterator[Any]:
+    def __iter__(self):
         """
         Permite iterar sobre la pila desde el tope hacia abajo.
         
         Yields:
-            Any: Elementos de la pila, comenzando por el tope
+            Elementos de la pila, comenzando por el tope
             
         Example:
             >>> stack = Stack()
@@ -355,12 +340,12 @@ class Stack:
         for item in reversed(self._items):
             yield item
     
-    def __contains__(self, item: Any) -> bool:
+    def __contains__(self, item):
         """
         Permite usar el operador 'in' para verificar si un elemento está en la pila.
         
         Args:
-            item (Any): Elemento a buscar
+            item: Elemento a buscar
             
         Returns:
             bool: True si el elemento está en la pila, False en caso contrario
@@ -375,7 +360,7 @@ class Stack:
         """
         return item in self._items
     
-    def __str__(self) -> str:
+    def __str__(self):
         """
         Representación en string de la pila para debugging y logging.
         
@@ -402,7 +387,7 @@ class Stack:
         
         return f"Stack(size={len(self._items)}, top='{top_item}'{capacity_info})"
     
-    def __repr__(self) -> str:
+    def __repr__(self):
         """
         Representación oficial de la pila para debugging avanzado.
         
@@ -411,7 +396,7 @@ class Stack:
         """
         return f"Stack(max_capacity={self._max_capacity})"
     
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other):
         """
         Permite comparar dos pilas por igualdad.
         
@@ -427,7 +412,7 @@ class Stack:
     
     # === MÉTODOS DE UTILIDAD AVANZADA ===
     
-    def copy(self) -> 'Stack':
+    def copy(self):
         """
         Crea una copia superficial de la pila.
         
@@ -439,16 +424,16 @@ class Stack:
         new_stack._creation_count = self._creation_count
         return new_stack
     
-    def to_list(self) -> List[Any]:
+    def to_list(self):
         """
         Convierte la pila a una lista manteniendo el orden interno.
         
         Returns:
-            List[Any]: Lista con los elementos en el mismo orden que la estructura interna
+            Lista con los elementos en el mismo orden que la estructura interna
         """
         return self._items.copy()
     
-    def extend_from_iterable(self, iterable) -> None:
+    def extend_from_iterable(self, iterable):
         """
         Agrega múltiples elementos desde un iterable.
         
@@ -461,19 +446,26 @@ class Stack:
         for item in iterable:
             self.push(item)  # Utilizará las validaciones de push
     
-    def get_statistics(self) -> dict:
+    def get_statistics(self):
         """
         Retorna estadísticas útiles sobre la pila.
         
         Returns:
             dict: Diccionario con estadísticas de la pila
         """
-        return {
+        stats = {
             "current_size": len(self._items),
             "max_capacity": self._max_capacity,
             "remaining_capacity": self.get_remaining_capacity(),
             "is_empty": self.is_empty(),
             "is_full": self.is_full(),
-            "total_items_created": self._creation_count,
-            "utilization_rate": (len(self._items) / self._max_capacity * 100) if self._max_capacity else None
-        } 
+            "total_items_created": self._creation_count
+        }
+        
+        # Calcular tasa de utilización si hay capacidad máxima
+        if self._max_capacity is not None:
+            stats["utilization_rate"] = (len(self._items) / self._max_capacity * 100)
+        else:
+            stats["utilization_rate"] = None
+            
+        return stats 

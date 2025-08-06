@@ -18,7 +18,6 @@ Version: 1.0
 
 import sys
 import os
-from typing import Dict, List, Tuple, Any
 
 # Agregar path para importaciones
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -36,7 +35,7 @@ class DefaultNetworkTemplates:
     """
     
     @staticmethod
-    def create_simple_home_network() -> Network:
+    def create_simple_home_network():
         """
         Crea una red doméstica simple con router, switch y algunos dispositivos.
         
@@ -145,7 +144,7 @@ class DefaultNetworkTemplates:
         return network
     
     @staticmethod
-    def create_small_office_network() -> Network:
+    def create_small_office_network():
         """
         Crea una red de oficina pequeña con múltiples segmentos.
         
@@ -321,7 +320,7 @@ class DefaultNetworkTemplates:
         return network
     
     @staticmethod
-    def create_data_center_network() -> Network:
+    def create_data_center_network():
         """
         Crea una red de centro de datos con redundancia y múltiples servicios.
         
@@ -516,7 +515,7 @@ class DefaultDeviceConfigurations:
     # === CONFIGURACIONES DE ROUTER ===
     
     @staticmethod
-    def get_home_router_config() -> Dict[str, Any]:
+    def get_home_router_config():
         """Configuración típica de router doméstico."""
         return {
             "name": "Home-Router",
@@ -539,7 +538,7 @@ class DefaultDeviceConfigurations:
         }
     
     @staticmethod
-    def get_enterprise_router_config() -> Dict[str, Any]:
+    def get_enterprise_router_config():
         """Configuración típica de router empresarial."""
         return {
             "name": "Enterprise-Router",
@@ -570,7 +569,7 @@ class DefaultDeviceConfigurations:
     # === CONFIGURACIONES DE SWITCH ===
     
     @staticmethod
-    def get_access_switch_config() -> Dict[str, Any]:
+    def get_access_switch_config():
         """Configuración típica de switch de acceso."""
         return {
             "name": "Access-Switch",
@@ -601,7 +600,7 @@ class DefaultDeviceConfigurations:
     # === CONFIGURACIONES DE HOST ===
     
     @staticmethod
-    def get_workstation_config() -> Dict[str, Any]:
+    def get_workstation_config():
         """Configuración típica de estación de trabajo."""
         return {
             "name": "Workstation",
@@ -618,7 +617,7 @@ class DefaultDeviceConfigurations:
         }
     
     @staticmethod
-    def get_server_config() -> Dict[str, Any]:
+    def get_server_config():
         """Configuración típica de servidor."""
         return {
             "name": "File-Server",
@@ -719,7 +718,7 @@ class DefaultTestData:
     # === CONFIGURACIONES DE PRUEBA COMPLEJAS ===
     
     @staticmethod
-    def get_test_packet_scenarios() -> List[Dict[str, Any]]:
+    def get_test_packet_scenarios():
         """Escenarios de prueba para paquetes."""
         return [
             {
@@ -753,7 +752,7 @@ class DefaultTestData:
         ]
     
     @staticmethod
-    def get_test_network_statistics() -> Dict[str, int]:
+    def get_test_network_statistics():
         """Estadísticas de red de prueba."""
         return {
             "total_packets_sent": 1250,
@@ -775,7 +774,7 @@ class DefaultTestData:
 
 # === FUNCIONES DE CONVENIENCIA ===
 
-def load_default_network(template_name: str = "simple_home") -> Network:
+def load_default_network(template_name="simple_home"):
     """
     Carga una red predefinida por nombre de plantilla.
     
@@ -801,7 +800,7 @@ def load_default_network(template_name: str = "simple_home") -> Network:
     return templates[template_name]()
 
 
-def get_quick_test_network() -> Network:
+def get_quick_test_network():
     """
     Retorna una red simple y rápida para pruebas básicas.
     
@@ -835,7 +834,7 @@ def get_quick_test_network() -> Network:
     return network
 
 
-def populate_test_statistics(network: Network) -> None:
+def populate_test_statistics(network):
     """
     Llena una red con estadísticas de prueba realistas.
     

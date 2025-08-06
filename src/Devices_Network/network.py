@@ -1,4 +1,3 @@
-from typing import Dict, List, Optional, Tuple
 import sys
 import os
 import json
@@ -6,6 +5,7 @@ from datetime import datetime
 
 # Agregar el directorio padre al path para importar las estructuras de datos
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from DataEstructures import LinkedList
 
 from .device import Device
 from .interface import Interface
@@ -14,10 +14,10 @@ from .interface import Interface
 class Network:
     """Clase que representa una red completa con múltiples dispositivos"""
     
-    def __init__(self, name: str = "Red Principal"):
+    def __init__(self, name="Red Principal"):
         self.name = name
-        self.devices: Dict[str, Device] = {}  # Diccionario de dispositivos por nombre
-        self.connections: List[Tuple[str, str, str, str]] = []  # Lista de conexiones (device1, iface1, device2, iface2)
+        self.devices = LinkedList()  # Lista de dispositivos (simulando diccionario)
+        self.connections = LinkedList()  # Lista de conexiones (device1, iface1, device2, iface2)
         self.totalPacketsProcessed = 0
         self.totalConnections = 0
         
@@ -27,26 +27,45 @@ class Network:
         self.dropped_packets_ttl = 0        # Paquetes descartados por TTL
         self.blocked_by_firewall = 0        # Paquetes bloqueados por firewall
         self.total_hops = 0                 # Total de saltos acumulados
-        self.device_activity = {}           # Actividad por dispositivo {device_name: count}
-        self.packet_paths = []              # Rutas de paquetes para estadísticas
+        self.device_activity = LinkedList()  # Actividad por dispositivo (simulando diccionario)
+        self.packet_paths = LinkedList()    # Rutas de paquetes para estadísticas
     
-    def addDevice(self, device: Device) -> bool:
+    def _find_device_by_name(self, device_name):
+        """Busca un dispositivo por nombre en la lista enlazada"""
+        current = self.devices.head
+        while current is not None:
+            if current.data.name == device_name:
+                return current.data
+            current = current.next
+        return None
+    
+    def _find_activity_by_device_name(self, device_name):
+        """Busca la actividad de un dispositivo por nombre"""
+        current = self.device_activity.head
+        while current is not None:
+            if current.data['device_name'] == device_name:
+                return current.data
+            current = current.next
+        return None
+    
+    def addDevice(self, device):
         """Agrega un nuevo dispositivo a la red"""
-        if device.name in self.devices:
+        if self._find_device_by_name(device.name):
             print(f"Error: Ya existe un dispositivo con el nombre '{device.name}' en la red")
             return False
         
-        self.devices[device.name] = device
+        self.devices.add_node(device)
         # Inicializar contador de actividad para el nuevo dispositivo
-        self.device_activity[device.name] = 0
+        activity_data = {'device_name': device.name, 'count': 0}
+        self.device_activity.add_node(activity_data)
         print(f"Dispositivo '{device.name}' agregado a la red '{self.name}'")
         return True
     
-    def getDevice(self, deviceName: str) -> Optional[Device]:
+    def getDevice(self, deviceName):
         """Recupera un dispositivo por nombre"""
-        return self.devices.get(deviceName)
+        return self._find_device_by_name(deviceName)
     
-    def removeDevice(self, deviceName: str) -> bool:
+    def removeDevice(self, deviceName):
         """Remueve un dispositivo de la red"""
         device = self.getDevice(deviceName)
         if not device:
@@ -61,20 +80,30 @@ class Network:
                 print(f"Interfaz {interface.name} desconectada antes de remover dispositivo")
         
         # Remover de la lista de conexiones
-        self.connections = [(d1, i1, d2, i2) for d1, i1, d2, i2 in self.connections 
-                           if d1 != deviceName and d2 != deviceName]
+        connections_to_remove = []
+        current = self.connections.head
+        while current is not None:
+            d1, i1, d2, i2 = current.data
+            if d1 == deviceName or d2 == deviceName:
+                connections_to_remove.append(current.data)
+            current = current.next
+        
+        for connection in connections_to_remove:
+            self.connections.remove_node(connection)
         
         # Remover dispositivo
-        del self.devices[deviceName]
+        self.devices.remove_node(device)
+        
         # Remover contador de actividad
-        if deviceName in self.device_activity:
-            del self.device_activity[deviceName]
+        activity_data = self._find_activity_by_device_name(deviceName)
+        if activity_data:
+            self.device_activity.remove_node(activity_data)
         
         print(f"Dispositivo '{deviceName}' removido de la red")
         return True
     
-    def establishConnection(self, device1Name: str, interface1Name: str, 
-                           device2Name: str, interface2Name: str) -> bool:
+    def establishConnection(self, device1Name, interface1Name, 
+                           device2Name, interface2Name):
         """Establece una conexión física entre dos interfaces de dispositivos diferentes"""
         # Obtener dispositivos
         device1 = self.getDevice(device1Name)
@@ -128,7 +157,7 @@ class Network:
         if success1 and success2:
             # Agregar a la lista de conexiones
             connection = (device1Name, interface1Name, device2Name, interface2Name)
-            self.connections.append(connection)
+            self.connections.add_node(connection)
             self.totalConnections += 1
             
             print(f"Conexión establecida: {device1Name}:{interface1Name} <--> {device2Name}:{interface2Name}")
@@ -137,8 +166,8 @@ class Network:
             print(f"Error: No se pudo establecer la conexión")
             return False
     
-    def removeConnection(self, device1Name: str, interface1Name: str, 
-                        device2Name: str, interface2Name: str) -> bool:
+    def removeConnection(self, device1Name, interface1Name, 
+                        device2Name, interface2Name):
         """Desconecta dos interfaces de dispositivos"""
         # Obtener dispositivos
         device1 = self.getDevice(device1Name)
@@ -169,22 +198,27 @@ class Network:
         connection1 = (device1Name, interface1Name, device2Name, interface2Name)
         connection2 = (device2Name, interface2Name, device1Name, interface1Name)
         
-        if connection1 in self.connections:
-            self.connections.remove(connection1)
-        elif connection2 in self.connections:
-            self.connections.remove(connection2)
+        # Buscar y remover la conexión
+        current = self.connections.head
+        while current is not None:
+            if current.data == connection1 or current.data == connection2:
+                self.connections.remove_node(current.data)
+                break
+            current = current.next
         
         self.totalConnections -= 1
         print(f"Conexión removida: {device1Name}:{interface1Name} <--> {device2Name}:{interface2Name}")
         return True
     
-    def listDevices(self) -> List[Dict]:
+    def listDevices(self):
         """Retorna una lista de todos los dispositivos y su estado"""
         deviceList = []
         
-        for deviceName, device in self.devices.items():
+        current = self.devices.head
+        while current is not None:
+            device = current.data
             deviceInfo = {
-                'name': deviceName,
+                'name': device.name,
                 'type': device.type,
                 'status': device.status,
                 'interfaces': len(device.interfaces),
@@ -192,10 +226,11 @@ class Network:
                 'connected_interfaces': len([i for i in device.interfaces if i.isConnected()])
             }
             deviceList.append(deviceInfo)
+            current = current.next
         
         return deviceList
     
-    def processAllQueues(self) -> Dict[str, int]:
+    def processAllQueues(self):
         """Itera a través de todos los dispositivos y sus interfaces para procesar paquetes"""
         stats = {
             'devicesProcessed': 0,
@@ -205,7 +240,9 @@ class Network:
             'offlineDevices': 0
         }
         
-        for deviceName, device in self.devices.items():
+        current = self.devices.head
+        while current is not None:
+            device = current.data
             stats['devicesProcessed'] += 1
             
             if device.isOnline():
@@ -225,11 +262,13 @@ class Network:
                         stats['totalPacketsProcessed'] += len(interfaceProcessed)
             else:
                 stats['offlineDevices'] += 1
+            
+            current = current.next
         
         self.totalPacketsProcessed += stats['totalPacketsProcessed']
         return stats
     
-    def updateTopology(self) -> bool:
+    def updateTopology(self):
         """Asegura la consistencia de las conexiones"""
         inconsistencies = 0
         
@@ -287,9 +326,12 @@ class Network:
         devicesByType = {}
         devicesByStatus = {}
         
-        for device in self.devices.values():
+        current = self.devices.head
+        while current:
+            device = current.data
             devicesByType[device.type] = devicesByType.get(device.type, 0) + 1
             devicesByStatus[device.status] = devicesByStatus.get(device.status, 0) + 1
+            current = current.next
         
         print("\nDispositivos por tipo:")
         for deviceType, count in devicesByType.items():
@@ -300,9 +342,23 @@ class Network:
             print(f"  {status}: {count}")
         
         # Mostrar estadísticas de interfaces
-        totalInterfaces = sum(len(device.interfaces) for device in self.devices.values())
-        activeInterfaces = sum(len([i for i in device.interfaces if i.isUp()]) for device in self.devices.values())
-        connectedInterfaces = sum(len([i for i in device.interfaces if i.isConnected()]) for device in self.devices.values())
+        totalInterfaces = 0
+        activeInterfaces = 0
+        connectedInterfaces = 0
+        
+        current = self.devices.head
+        while current:
+            device = current.data
+            # Contar interfaces totales
+            interface_current = device.interfaces.head
+            while interface_current:
+                totalInterfaces += 1
+                if interface_current.data.isUp():
+                    activeInterfaces += 1
+                if interface_current.data.isConnected():
+                    connectedInterfaces += 1
+                interface_current = interface_current.next
+            current = current.next
         
         print(f"\nInterfaces totales: {totalInterfaces}")
         print(f"Interfaces activas: {activeInterfaces}")
@@ -370,7 +426,7 @@ class Network:
         
         return self.total_hops / total_processed_packets
     
-    def identify_top_talker(self) -> Optional[Dict[str, any]]:
+    def identify_top_talker(self):
         """
         Determina el dispositivo con más actividad
         
@@ -395,7 +451,7 @@ class Network:
             'status': device.status if device else 'unknown'
         }
     
-    def get_detailed_statistics(self) -> Dict[str, any]:
+    def get_detailed_statistics(self):
         """
         Retorna estadísticas detalladas de la red en formato diccionario
         
@@ -406,14 +462,30 @@ class Network:
         devices_by_type = {}
         devices_by_status = {}
         
-        for device in self.devices.values():
+        current = self.devices.head
+        while current:
+            device = current.data
             devices_by_type[device.type] = devices_by_type.get(device.type, 0) + 1
             devices_by_status[device.status] = devices_by_status.get(device.status, 0) + 1
+            current = current.next
         
         # Calcular estadísticas de interfaces
-        total_interfaces = sum(len(device.interfaces) for device in self.devices.values())
-        active_interfaces = sum(len([i for i in device.interfaces if i.isUp()]) for device in self.devices.values())
-        connected_interfaces = sum(len([i for i in device.interfaces if i.isConnected()]) for device in self.devices.values())
+        total_interfaces = 0
+        active_interfaces = 0
+        connected_interfaces = 0
+        
+        current = self.devices.head
+        while current:
+            device = current.data
+            interface_current = device.interfaces.head
+            while interface_current:
+                total_interfaces += 1
+                if interface_current.data.isUp():
+                    active_interfaces += 1
+                if interface_current.data.isConnected():
+                    connected_interfaces += 1
+                interface_current = interface_current.next
+            current = current.next
         
         return {
             'network_name': self.name,
@@ -444,7 +516,7 @@ class Network:
             'device_activity': self.device_activity.copy()
         }
     
-    def _is_connection_active(self, connection: Tuple[str, str, str, str]) -> bool:
+    def _is_connection_active(self, connection):
         """Verifica si una conexión está activa (ambos dispositivos online y interfaces up)"""
         device1_name, interface1_name, device2_name, interface2_name = connection
         
@@ -480,7 +552,7 @@ class Network:
     
     # ===== NUEVO: Módulo 6 Configuration Persistence - Métodos de serialización =====
     
-    def to_dict(self) -> dict:
+    def to_dict(self):
         """
         Serializa la red completa a un diccionario para guardado JSON
         
@@ -639,7 +711,7 @@ class Network:
             print(f"❌ Error guardando configuración: {str(e)}")
             raise
     
-    def load_config(self, filename: str) -> bool:
+    def load_config(self, filename):
         """
         Carga configuración desde un archivo JSON
         
@@ -705,14 +777,19 @@ class Network:
     def _clear_current_config(self):
         """Limpia la configuración actual"""
         # Desconectar todas las interfaces
-        for device in self.devices.values():
-            for interface in device.interfaces:
-                if interface.isConnected():
-                    interface.disconnect()
+        current = self.devices.head
+        while current:
+            device = current.data
+            interface_current = device.interfaces.head
+            while interface_current:
+                if interface_current.data.isConnected():
+                    interface_current.data.disconnect()
+                interface_current = interface_current.next
+            current = current.next
         
         # Limpiar todo
-        self.devices.clear()
-        self.connections.clear()
+        self.devices = LinkedList()
+        self.connections = LinkedList()
         self.device_activity.clear()
         self.packet_paths.clear()
         
@@ -725,7 +802,7 @@ class Network:
         self.blocked_by_firewall = 0
         self.total_hops = 0
     
-    def list_saved_configs(self) -> List[str]:
+    def list_saved_configs(self):
         """
         Lista archivos de configuración disponibles
         
@@ -743,7 +820,7 @@ class Network:
         
         return sorted(config_files)
     
-    def get_config_info(self, filename: str) -> Optional[dict]:
+    def get_config_info(self, filename):
         """
         Obtiene información de un archivo de configuración sin cargarlo
         
@@ -779,19 +856,26 @@ class Network:
         except Exception:
             return None
     
-    def getAllDeviceNames(self) -> List[str]:
+    def getAllDeviceNames(self):
         """Retorna una lista con los nombres de todos los dispositivos"""
-        return list(self.devices.keys())
+        device_names = []
+        current = self.devices.head
+        while current is not None:
+            device_names.append(current.data.name)
+            current = current.next
+        return device_names
     
-    def getNetworkTopology(self) -> Dict:
+    def getNetworkTopology(self):
         """Retorna un diccionario con la topología completa de la red"""
         topology = {
             'name': self.name,
             'devices': {},
-            'connections': self.connections
+            'connections': self.connections.traverse()
         }
         
-        for deviceName, device in self.devices.items():
+        current = self.devices.head
+        while current is not None:
+            device = current.data
             deviceData = {
                 'type': device.type,
                 'status': device.status,
@@ -807,7 +891,8 @@ class Network:
                 }
                 deviceData['interfaces'][interface.name] = interfaceData
             
-            topology['devices'][deviceName] = deviceData
+            topology['devices'][device.name] = deviceData
+            current = current.next
         
         return topology
     
