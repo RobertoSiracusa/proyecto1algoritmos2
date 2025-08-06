@@ -448,3 +448,83 @@ class ShowCommand(CompositeCommand):
             return CommandResult(True, help_text)
         
         return super().execute(args, context) 
+
+class ShowIpRouteCommand(Command):
+    """Comando para mostrar tabla de rutas IP"""
+    
+    def __init__(self):
+        super().__init__(
+            name="ip route",
+            description="Muestra la tabla de rutas IP",
+            syntax="show ip route"
+        )
+    
+    def execute(self, args: List[str], context) -> CommandResult:
+        # Verificar que hay un dispositivo seleccionado
+        if not context.current_device:
+            return CommandResult(False, "No hay dispositivo seleccionado")
+        
+        # Verificar que es un router
+        if context.current_device.type != "router":
+            return CommandResult(False, f"Comando solo disponible para routers. {context.current_device.name} es un {context.current_device.type}")
+        
+        # Verificar que el dispositivo está online
+        if not context.current_device.isOnline():
+            return CommandResult(False, f"Router {context.current_device.name} está offline")
+        
+        try:
+            # Mostrar tabla de rutas
+            routing_table = context.current_device.show_routing_table()
+            return CommandResult(True, routing_table)
+            
+        except Exception as e:
+            return CommandResult(False, f"Error al mostrar tabla de rutas: {str(e)}")
+
+
+class ShowIpInterfaceBriefCommand(Command):
+    """Comando para mostrar resumen de interfaces IP"""
+    
+    def __init__(self):
+        super().__init__(
+            name="ip interface brief",
+            description="Muestra un resumen de interfaces IP",
+            syntax="show ip interface brief"
+        )
+    
+    def execute(self, args: List[str], context) -> CommandResult:
+        # Verificar que hay un dispositivo seleccionado
+        if not context.current_device:
+            return CommandResult(False, "No hay dispositivo seleccionado")
+        
+        # Verificar que el dispositivo está online
+        if not context.current_device.isOnline():
+            return CommandResult(False, f"Dispositivo {context.current_device.name} está offline")
+        
+        try:
+            # Obtener interfaces activas
+            active_interfaces = context.current_device.getActiveInterfaces()
+            
+            if not active_interfaces:
+                return CommandResult(True, "No hay interfaces IP activas")
+            
+            # Formatear salida
+            result = f"Resumen de interfaces IP - {context.current_device.name}:\n"
+            result += "-" * 60 + "\n"
+            result += f"{'Interfaz':<15} {'Estado':<10} {'IP':<15} {'MAC':<17} {'Conectado a'}\n"
+            result += "-" * 60 + "\n"
+            
+            for interface in active_interfaces:
+                status = "up" if interface.isUp() else "down"
+                ip = interface.ipAddress if interface.ipAddress else "No configurada"
+                mac = interface.macAddress if interface.macAddress else "No configurada"
+                
+                connected_to = ""
+                if interface.isConnected():
+                    connected_to = f"{interface.connectedTo.name} ({interface.connectedTo.type})"
+                
+                result += f"{interface.name:<15} {status:<10} {ip:<15} {mac:<17} {connected_to}\n"
+            
+            return CommandResult(True, result)
+            
+        except Exception as e:
+            return CommandResult(False, f"Error al mostrar interfaces: {str(e)}")

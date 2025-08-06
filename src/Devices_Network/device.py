@@ -31,6 +31,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from DataEstructures.stack import Stack
 from DataEstructures.queue import Queue
 from .interface import Interface
+from .routing_table import RoutingTable
 
 # Importar validaciones si están disponibles
 try:
@@ -151,6 +152,11 @@ class Device:
         self.receivedPacketsHistory: Stack = Stack(max_capacity=1000)  # Limitar historial
         self.incomingQueue: Queue = Queue(max_capacity=500)  # Limitar cola entrante
         self.outgoingQueue: Queue = Queue(max_capacity=500)  # Limitar cola saliente
+        
+        # === TABLA DE RUTAS (solo para routers) ===
+        self.routing_table: Optional[RoutingTable] = None
+        if self.type == "router":
+            self.routing_table = RoutingTable()
         
         # === ATRIBUTOS PRIVADOS PARA ESTADÍSTICAS Y CONTROL ===
         import time
@@ -577,12 +583,47 @@ class Device:
     
     def _router_process_packet(self, packet: Any) -> bool:
         """Procesamiento específico para routers."""
-        # En una implementación completa, aquí iría:
-        # - Análisis de cabeceras IP
-        # - Consulta de tabla de routing
-        # - Decrementar TTL
-        # - Reenvío a interfaz apropiada
-        return True
+        try:
+            # Verificar que tenemos tabla de rutas
+            if not self.routing_table:
+                print(f"⚠️  Router {self.name} no tiene tabla de rutas configurada")
+                return False
+            
+            # Simular análisis de cabeceras IP
+            if hasattr(packet, 'destination_ip') and hasattr(packet, 'source_ip'):
+                dest_ip = packet.destination_ip
+                source_ip = packet.source_ip
+                
+                # Buscar ruta en tabla de routing
+                route = self.routing_table.lookup_route(dest_ip)
+                
+                if route:
+                    # Simular decremento de TTL
+                    if hasattr(packet, 'ttl'):
+                        packet.ttl -= 1
+                        if packet.ttl <= 0:
+                            print(f"❌ Paquete descartado por TTL=0 en {self.name}")
+                            return False
+                    
+                    # Reenviar a interfaz apropiada
+                    target_interface = self.getInterface(route.interface)
+                    if target_interface and target_interface.isActive():
+                        print(f"🔄 Router {self.name} reenviando paquete a {route.interface}")
+                        return True
+                    else:
+                        print(f"❌ Interfaz {route.interface} no disponible en {self.name}")
+                        return False
+                else:
+                    print(f"❌ No se encontró ruta para {dest_ip} en {self.name}")
+                    return False
+            else:
+                # Paquete sin información IP válida
+                print(f"⚠️  Paquete sin información IP válida en {self.name}")
+                return False
+                
+        except Exception as e:
+            print(f"❌ Error procesando paquete en router {self.name}: {str(e)}")
+            return False
     
     def _switch_process_packet(self, packet: Any) -> bool:
         """Procesamiento específico para switches."""
@@ -826,6 +867,100 @@ class Device:
                 "outgoing_stats": self.outgoingQueue.get_statistics() if hasattr(self.outgoingQueue, 'get_statistics') else {}
             }
         }
+        
+        # Agregar estadísticas de routing si es un router
+        if self.type == "router" and self.routing_table:
+            stats["routing"] = self.routing_table.get_statistics()
+        
+        return stats
+    
+    # === MÉTODOS DE ROUTING (solo para routers) ===
+    
+    def add_route(self, destination: str, next_hop: str, interface: str, 
+                  metric: int = 1, protocol: str = "static") -> bool:
+        """
+        Agrega una ruta a la tabla de routing (solo para routers).
+        
+        Args:
+            destination: Red de destino (ej: "192.168.1.0/24")
+            next_hop: Próximo salto (ej: "192.168.0.1")
+            interface: Interfaz de salida
+            metric: Métrica de la ruta
+            protocol: Protocolo de routing
+            
+        Returns:
+            bool: True si la ruta fue agregada exitosamente
+        """
+        if self.type != "router":
+            print(f"❌ Solo los routers pueden tener tabla de rutas. {self.name} es un {self.type}")
+            return False
+        
+        if not self.routing_table:
+            print(f"❌ Router {self.name} no tiene tabla de rutas inicializada")
+            return False
+        
+        return self.routing_table.add_route(destination, next_hop, interface, metric, protocol)
+    
+    def remove_route(self, destination: str) -> bool:
+        """
+        Elimina una ruta de la tabla de routing (solo para routers).
+        
+        Args:
+            destination: Red de destino a eliminar
+            
+        Returns:
+            bool: True si la ruta fue eliminada exitosamente
+        """
+        if self.type != "router" or not self.routing_table:
+            return False
+        
+        return self.routing_table.remove_route(destination)
+    
+    def show_routing_table(self) -> str:
+        """
+        Muestra la tabla de rutas (solo para routers).
+        
+        Returns:
+            str: Tabla de rutas formateada o mensaje de error
+        """
+        if self.type != "router":
+            return f"❌ Solo los routers tienen tabla de rutas. {self.name} es un {self.type}"
+        
+        if not self.routing_table:
+            return f"❌ Router {self.name} no tiene tabla de rutas configurada"
+        
+        return self.routing_table.show_routing_table()
+    
+    def set_default_route(self, next_hop: str, interface: str) -> bool:
+        """
+        Establece la ruta por defecto (solo para routers).
+        
+        Args:
+            next_hop: Próximo salto para la ruta por defecto
+            interface: Interfaz de salida
+            
+        Returns:
+            bool: True si se estableció exitosamente
+        """
+        if self.type != "router" or not self.routing_table:
+            return False
+        
+        return self.routing_table.set_default_route(next_hop, interface)
+    
+    def clear_routes(self, protocol: str = None) -> int:
+        """
+        Limpia rutas de la tabla (solo para routers).
+        
+        Args:
+            protocol: Si se especifica, solo limpia rutas de ese protocolo
+            
+        Returns:
+            int: Número de rutas eliminadas
+        """
+        if self.type != "router" or not self.routing_table:
+            return 0
+        
+        return self.routing_table.clear_routes(protocol)
     
     def _get_interfaces_by_status_count(self) -> Dict[str, int]:
         """Retorna conteo de interfaces por estado."""
@@ -1092,3 +1227,17 @@ class Device:
             int: Número de interfaces del dispositivo
         """
         return len(self.interfaces) 
+
+class RoutingTable:
+    def __init__(self):
+        self.routes = {}
+    
+    def add_route(self, destination, next_hop, interface, metric=1):
+        self.routes[destination] = {
+            'next_hop': next_hop,
+            'interface': interface,
+            'metric': metric
+        }
+    
+    def lookup_route(self, destination):
+        return self.routes.get(destination)

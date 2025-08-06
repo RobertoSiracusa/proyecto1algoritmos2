@@ -29,13 +29,17 @@ from .show_commands import (
     ShowDevicesCommand,
     ShowTopologyCommand,
     ShowConfigsCommand,
-    ConfigInfoCommand
+    ConfigInfoCommand,
+    ShowIpRouteCommand,
+    ShowIpInterfaceBriefCommand
 )
 
 from .network_commands import (
     SendPacketCommand,
     TickCommand,
-    ProcessCommand
+    ProcessCommand,
+    PingCommand,
+    TracerouteCommand
 )
 
 from .config_commands import (
@@ -45,6 +49,14 @@ from .config_commands import (
     NoShutdownCommand,
     SaveRunningConfigCommand,
     LoadConfigCommand
+)
+
+from .routing_commands import (
+    AddRouteCommand,
+    RemoveRouteCommand,
+    DefaultRouteCommand,
+    ClearRoutesCommand,
+    ShowRoutingTableCommand
 )
 
 __all__ = [
@@ -69,11 +81,15 @@ __all__ = [
     'ShowTopologyCommand',
     'ShowConfigsCommand',
     'ConfigInfoCommand',
+    'ShowIpRouteCommand',
+    'ShowIpInterfaceBriefCommand',
     
     # Network commands
     'SendPacketCommand',
     'TickCommand',
     'ProcessCommand',
+    'PingCommand',
+    'TracerouteCommand',
     
     # Configuration commands
     'HostnameCommand',
@@ -81,5 +97,12 @@ __all__ = [
     'ShutdownCommand',
     'NoShutdownCommand',
     'SaveRunningConfigCommand',
-    'LoadConfigCommand'
+    'LoadConfigCommand',
+    
+    # Routing commands
+    'AddRouteCommand',
+    'RemoveRouteCommand',
+    'DefaultRouteCommand',
+    'ClearRoutesCommand',
+    'ShowRoutingTableCommand'
 ] 

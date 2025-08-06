@@ -116,3 +116,166 @@ class ProcessCommand(Command):
             
         except Exception as e:
             return CommandResult(False, f"Error al procesar colas: {str(e)}") 
+
+class PingCommand(Command):
+    """Comando para hacer ping a un destino"""
+    
+    def __init__(self):
+        super().__init__(
+            name="ping",
+            description="Hace ping a un destino IP",
+            syntax="ping <destination_ip> [count]"
+        )
+    
+    def execute(self, args: List[str], context) -> CommandResult:
+        if not self.validate_args(args, min_args=1, max_args=2):
+            return CommandResult(False, "Sintaxis: ping <destination_ip> [count]")
+        
+        destination_ip = args[0]
+        count = int(args[1]) if len(args) > 1 else 4
+        
+        # Verificar que hay un dispositivo seleccionado
+        if not context.current_device:
+            return CommandResult(False, "No hay dispositivo seleccionado")
+        
+        # Verificar que el dispositivo está online
+        if not context.current_device.isOnline():
+            return CommandResult(False, f"Dispositivo {context.current_device.name} está offline")
+        
+        # Simular ping usando el CommunicationManager
+        comm_manager = getattr(context, 'communication_manager', None)
+        if not comm_manager:
+            return CommandResult(False, "No hay gestor de comunicaciones disponible")
+        
+        result = f"Ping a {destination_ip} desde {context.current_device.name} ({count} paquetes):\n"
+        result += "-" * 60 + "\n"
+        
+        successful_pings = 0
+        total_time = 0
+        
+        for i in range(count):
+            try:
+                # Simular envío de paquete ICMP
+                import time
+                start_time = time.time()
+                
+                # Crear paquete de ping
+                packet = comm_manager.send(
+                    source_ip=context.current_device.name,  # Usar nombre como IP temporal
+                    destination_ip=destination_ip,
+                    content=f"PING-{i+1}",
+                    ttl=64
+                )
+                
+                if packet:
+                    # Simular procesamiento
+                    time.sleep(0.1)  # Simular latencia
+                    end_time = time.time()
+                    response_time = (end_time - start_time) * 1000  # Convertir a ms
+                    
+                    result += f"Paquete {i+1}: Respuesta recibida en {response_time:.2f} ms\n"
+                    successful_pings += 1
+                    total_time += response_time
+                else:
+                    result += f"Paquete {i+1}: Timeout\n"
+                    
+            except Exception as e:
+                result += f"Paquete {i+1}: Error - {str(e)}\n"
+        
+        # Estadísticas finales
+        if successful_pings > 0:
+            avg_time = total_time / successful_pings
+            result += f"\nEstadísticas:\n"
+            result += f"  Paquetes enviados: {count}\n"
+            result += f"  Paquetes recibidos: {successful_pings}\n"
+            result += f"  Tiempo promedio: {avg_time:.2f} ms\n"
+            result += f"  Tasa de éxito: {(successful_pings/count)*100:.1f}%\n"
+        else:
+            result += f"\n❌ No se recibieron respuestas de {destination_ip}\n"
+        
+        return CommandResult(True, result)
+
+
+class TracerouteCommand(Command):
+    """Comando para hacer traceroute a un destino"""
+    
+    def __init__(self):
+        super().__init__(
+            name="traceroute",
+            description="Hace traceroute a un destino IP",
+            syntax="traceroute <destination_ip>"
+        )
+    
+    def execute(self, args: List[str], context) -> CommandResult:
+        if not self.validate_args(args, min_args=1, max_args=1):
+            return CommandResult(False, "Sintaxis: traceroute <destination_ip>")
+        
+        destination_ip = args[0]
+        
+        # Verificar que hay un dispositivo seleccionado
+        if not context.current_device:
+            return CommandResult(False, "No hay dispositivo seleccionado")
+        
+        # Verificar que el dispositivo está online
+        if not context.current_device.isOnline():
+            return CommandResult(False, f"Dispositivo {context.current_device.name} está offline")
+        
+        result = f"Traceroute a {destination_ip} desde {context.current_device.name}:\n"
+        result += "-" * 60 + "\n"
+        
+        # Simular traceroute con TTL incrementales
+        max_hops = 15
+        destination_reached = False
+        
+        for hop in range(1, max_hops + 1):
+            try:
+                # Simular envío con TTL específico
+                import time
+                start_time = time.time()
+                
+                # Crear paquete con TTL específico
+                comm_manager = getattr(context, 'communication_manager', None)
+                if comm_manager:
+                    packet = comm_manager.send(
+                        source_ip=context.current_device.name,
+                        destination_ip=destination_ip,
+                        content=f"TRACEROUTE-HOP-{hop}",
+                        ttl=hop
+                    )
+                
+                # Simular respuesta del hop
+                time.sleep(0.05)  # Simular latencia
+                end_time = time.time()
+                response_time = (end_time - start_time) * 1000
+                
+                # Simular diferentes respuestas según el hop
+                if hop == 1:
+                    hop_name = "Router-1"
+                    hop_ip = "192.168.1.1"
+                elif hop == 2:
+                    hop_name = "Switch-1"
+                    hop_ip = "192.168.2.1"
+                elif hop == 3:
+                    hop_name = "Router-2"
+                    hop_ip = "10.0.0.1"
+                elif hop == 4:
+                    hop_name = destination_ip
+                    hop_ip = destination_ip
+                    destination_reached = True
+                else:
+                    hop_name = f"Hop-{hop}"
+                    hop_ip = f"192.168.{hop}.1"
+                
+                result += f"{hop:2}  {hop_name} ({hop_ip})  {response_time:.2f} ms\n"
+                
+                if destination_reached:
+                    result += f"\n✅ Destino alcanzado en {hop} saltos\n"
+                    break
+                    
+            except Exception as e:
+                result += f"{hop:2}  * * *  Timeout\n"
+        
+        if not destination_reached:
+            result += f"\n❌ No se pudo alcanzar el destino en {max_hops} saltos\n"
+        
+        return CommandResult(True, result)

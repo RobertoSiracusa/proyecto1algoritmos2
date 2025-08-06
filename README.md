@@ -122,6 +122,24 @@ show configs                                    # Listar configuraciones guardad
 show config-info mi_red.json                   # Ver información de configuración
 ```
 
+#### **Comandos de Routing (Solo para Routers)**
+```bash
+show ip route                                   # Mostrar tabla de rutas
+show ip interface brief                         # Resumen de interfaces IP
+ip route 192.168.1.0/24 192.168.1.254 eth0     # Agregar ruta estática
+ip route default 192.168.1.254 eth0            # Configurar ruta por defecto
+no ip route 192.168.1.0/24                     # Eliminar ruta
+clear ip route                                  # Limpiar todas las rutas
+show routing                                    # Mostrar tabla de rutas (alias)
+```
+
+#### **Comandos de Red**
+```bash
+ping 192.168.1.1                               # Hacer ping a un destino
+ping 192.168.1.1 10                            # Ping con número específico de paquetes
+traceroute 192.168.1.1                         # Trazar ruta a un destino
+```
+
 ## 🏗️ Arquitectura del Proyecto
 
 ```

@@ -67,6 +67,8 @@ class CLIParser:
         self.command_registry.register(SendPacketCommand())
         self.command_registry.register(TickCommand())
         self.command_registry.register(ProcessCommand())
+        self.command_registry.register(PingCommand())
+        self.command_registry.register(TracerouteCommand())
         
         # Registrar comandos de configuración
         self.command_registry.register(HostnameCommand())
@@ -77,6 +79,13 @@ class CLIParser:
         # ===== NUEVO: Módulo 6 Configuration Persistence - Registrar comandos de persistencia =====
         self.command_registry.register(SaveRunningConfigCommand())
         self.command_registry.register(LoadConfigCommand())
+        
+        # ===== NUEVO: Comandos de routing =====
+        self.command_registry.register(AddRouteCommand())
+        self.command_registry.register(RemoveRouteCommand())
+        self.command_registry.register(DefaultRouteCommand())
+        self.command_registry.register(ClearRoutesCommand())
+        self.command_registry.register(ShowRoutingTableCommand())
     
     def parse_command(self, command_string: str) -> tuple:
         """
