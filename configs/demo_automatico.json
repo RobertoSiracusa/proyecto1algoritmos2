@@ -1,0 +1,179 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "created": "2025-07-29T15:38:59.108830",
+    "simulator_module": "Network Simulator v1.0"
+  },
+  "network": {
+    "name": "Red Demostración Profesor",
+    "totalPacketsProcessed": 5,
+    "totalConnections": 0
+  },
+  "statistics": {
+    "total_packets_sent": 0,
+    "delivered_packets": 0,
+    "dropped_packets_ttl": 0,
+    "blocked_by_firewall": 0,
+    "total_hops": 0,
+    "device_activity": {
+      "Router-Central": 1,
+      "Switch-Principal": 4,
+      "PC-Oficina": 0,
+      "Servidor-Web": 0
+    },
+    "packet_paths": []
+  },
+  "devices": [
+    {
+      "metadata": {
+        "serialization_version": "1.0",
+        "creation_time": 1753817921.7604887,
+        "last_activity": 1753817921.760822
+      },
+      "device_info": {
+        "name": "Router-Central",
+        "type": "router",
+        "status": "online",
+        "total_packets_processed": 0
+      },
+      "interfaces": [
+        {
+          "name": "eth0",
+          "ipAddress": "192.168.1.1",
+          "macAddress": "aa:bb:cc:dd:ee:01",
+          "status": "up",
+          "connectedTo": {
+            "name": "port1",
+            "device": null
+          },
+          "outgoing_queue": []
+        },
+        {
+          "name": "eth1",
+          "ipAddress": "10.0.0.1",
+          "macAddress": "aa:bb:cc:dd:ee:02",
+          "status": "up",
+          "connectedTo": {
+            "name": "eth0",
+            "device": null
+          },
+          "outgoing_queue": []
+        }
+      ],
+      "statistics": {
+        "interface_count": 2,
+        "active_interfaces": 2,
+        "connected_interfaces": 2
+      },
+      "received_packets_history": []
+    },
+    {
+      "metadata": {
+        "serialization_version": "1.0",
+        "creation_time": 1753817921.7610064,
+        "last_activity": 1753817921.76134
+      },
+      "device_info": {
+        "name": "Switch-Principal",
+        "type": "switch",
+        "status": "online",
+        "total_packets_processed": 0
+      },
+      "interfaces": [
+        {
+          "name": "port1",
+          "ipAddress": "192.168.1.2",
+          "macAddress": "bb:cc:dd:ee:ff:01",
+          "status": "up",
+          "connectedTo": {
+            "name": "eth0",
+            "device": null
+          },
+          "outgoing_queue": []
+        },
+        {
+          "name": "port2",
+          "ipAddress": "192.168.1.3",
+          "macAddress": "bb:cc:dd:ee:ff:02",
+          "status": "up",
+          "connectedTo": {
+            "name": "eth0",
+            "device": null
+          },
+          "outgoing_queue": []
+        }
+      ],
+      "statistics": {
+        "interface_count": 2,
+        "active_interfaces": 2,
+        "connected_interfaces": 2
+      },
+      "received_packets_history": []
+    },
+    {
+      "metadata": {
+        "serialization_version": "1.0",
+        "creation_time": 1753817921.7615244,
+        "last_activity": 1753817921.7616098
+      },
+      "device_info": {
+        "name": "PC-Oficina",
+        "type": "host",
+        "status": "online",
+        "total_packets_processed": 0
+      },
+      "interfaces": [
+        {
+          "name": "eth0",
+          "ipAddress": "192.168.1.100",
+          "macAddress": "cc:dd:ee:ff:aa:01",
+          "status": "up",
+          "connectedTo": {
+            "name": "port2",
+            "device": null
+          },
+          "outgoing_queue": []
+        }
+      ],
+      "statistics": {
+        "interface_count": 1,
+        "active_interfaces": 1,
+        "connected_interfaces": 1
+      },
+      "received_packets_history": []
+    },
+    {
+      "metadata": {
+        "serialization_version": "1.0",
+        "creation_time": 1753817921.761782,
+        "last_activity": 1753817921.7618713
+      },
+      "device_info": {
+        "name": "Servidor-Web",
+        "type": "host",
+        "status": "online",
+        "total_packets_processed": 0
+      },
+      "interfaces": [
+        {
+          "name": "eth0",
+          "ipAddress": "192.168.1.200",
+          "macAddress": "dd:ee:ff:aa:bb:01",
+          "status": "up",
+          "connectedTo": {
+            "name": "eth1",
+            "device": null
+          },
+          "outgoing_queue": []
+        }
+      ],
+      "statistics": {
+        "interface_count": 1,
+        "active_interfaces": 1,
+        "connected_interfaces": 1
+      },
+      "received_packets_history": []
+    }
+  ],
+  "connections": []
+}

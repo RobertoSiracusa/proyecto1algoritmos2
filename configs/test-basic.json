@@ -1,0 +1,65 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "created": "2025-07-29T14:16:28.959872",
+    "simulator_module": "Network Simulator v1.0"
+  },
+  "network": {
+    "name": "Test Network",
+    "totalPacketsProcessed": 0,
+    "totalConnections": 0
+  },
+  "statistics": {
+    "total_packets_sent": 100,
+    "delivered_packets": 95,
+    "dropped_packets_ttl": 0,
+    "blocked_by_firewall": 0,
+    "total_hops": 0,
+    "device_activity": {
+      "Test-Router": 50,
+      "Test-Switch": 0
+    },
+    "packet_paths": []
+  },
+  "devices": [
+    {
+      "name": "Test-Router",
+      "type": "router",
+      "status": "online",
+      "interfaces": [
+        {
+          "name": "gi0/0",
+          "ipAddress": "192.168.1.1",
+          "macAddress": "",
+          "status": "up",
+          "connectedTo": {
+            "name": "fa0/1",
+            "device": null
+          },
+          "outgoing_queue": []
+        }
+      ],
+      "received_packets_history": []
+    },
+    {
+      "name": "Test-Switch",
+      "type": "switch",
+      "status": "online",
+      "interfaces": [
+        {
+          "name": "fa0/1",
+          "ipAddress": "",
+          "macAddress": "",
+          "status": "up",
+          "connectedTo": {
+            "name": "gi0/0",
+            "device": null
+          },
+          "outgoing_queue": []
+        }
+      ],
+      "received_packets_history": []
+    }
+  ],
+  "connections": []
+}
