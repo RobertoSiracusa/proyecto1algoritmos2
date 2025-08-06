@@ -1,0 +1,135 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "created": "2025-07-29T14:15:08.220555",
+    "simulator_module": "Network Simulator v1.0"
+  },
+  "network": {
+    "name": "Red Simple Demo",
+    "totalPacketsProcessed": 0,
+    "totalConnections": 0
+  },
+  "statistics": {
+    "total_packets_sent": 150,
+    "delivered_packets": 142,
+    "dropped_packets_ttl": 3,
+    "blocked_by_firewall": 0,
+    "total_hops": 425,
+    "device_activity": {
+      "Main-Router": 45,
+      "Core-Switch": 38,
+      "Web-Server": 25,
+      "Admin-PC": 12
+    },
+    "packet_paths": []
+  },
+  "devices": [
+    {
+      "name": "Main-Router",
+      "type": "router",
+      "status": "online",
+      "interfaces": [
+        {
+          "name": "wan0",
+          "ipAddress": "203.0.113.1",
+          "macAddress": "00:11:22:33:44:01",
+          "status": "up",
+          "connectedTo": null,
+          "outgoing_queue": []
+        },
+        {
+          "name": "lan0",
+          "ipAddress": "192.168.1.1",
+          "macAddress": "00:11:22:33:44:02",
+          "status": "up",
+          "connectedTo": {
+            "name": "gi0/1",
+            "device": null
+          },
+          "outgoing_queue": []
+        }
+      ],
+      "received_packets_history": []
+    },
+    {
+      "name": "Core-Switch",
+      "type": "switch",
+      "status": "online",
+      "interfaces": [
+        {
+          "name": "gi0/1",
+          "ipAddress": "",
+          "macAddress": "",
+          "status": "up",
+          "connectedTo": {
+            "name": "lan0",
+            "device": null
+          },
+          "outgoing_queue": []
+        },
+        {
+          "name": "gi0/2",
+          "ipAddress": "",
+          "macAddress": "",
+          "status": "up",
+          "connectedTo": {
+            "name": "eth0",
+            "device": null
+          },
+          "outgoing_queue": []
+        },
+        {
+          "name": "gi0/3",
+          "ipAddress": "",
+          "macAddress": "",
+          "status": "up",
+          "connectedTo": {
+            "name": "eth0",
+            "device": null
+          },
+          "outgoing_queue": []
+        }
+      ],
+      "received_packets_history": []
+    },
+    {
+      "name": "Web-Server",
+      "type": "host",
+      "status": "online",
+      "interfaces": [
+        {
+          "name": "eth0",
+          "ipAddress": "192.168.1.10",
+          "macAddress": "aa:bb:cc:dd:ee:10",
+          "status": "up",
+          "connectedTo": {
+            "name": "gi0/2",
+            "device": null
+          },
+          "outgoing_queue": []
+        }
+      ],
+      "received_packets_history": []
+    },
+    {
+      "name": "Admin-PC",
+      "type": "host",
+      "status": "online",
+      "interfaces": [
+        {
+          "name": "eth0",
+          "ipAddress": "192.168.1.100",
+          "macAddress": "aa:bb:cc:dd:ee:64",
+          "status": "up",
+          "connectedTo": {
+            "name": "gi0/3",
+            "device": null
+          },
+          "outgoing_queue": []
+        }
+      ],
+      "received_packets_history": []
+    }
+  ],
+  "connections": []
+}

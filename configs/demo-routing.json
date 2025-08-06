@@ -1,0 +1,185 @@
+{
+  "metadata": {
+    "name": "Demo con Routing",
+    "description": "Configuración de ejemplo con routers y tabla de rutas",
+    "version": "1.0",
+    "created": "2025-01-27T10:00:00Z"
+  },
+  "network": {
+    "devices": [
+      {
+        "name": "Router-1",
+        "type": "router",
+        "status": "online",
+        "interfaces": [
+          {
+            "name": "eth0",
+            "status": "up",
+            "ipAddress": "192.168.1.1",
+            "macAddress": "00:11:22:33:44:01"
+          },
+          {
+            "name": "eth1", 
+            "status": "up",
+            "ipAddress": "10.0.0.1",
+            "macAddress": "00:11:22:33:44:02"
+          }
+        ],
+        "routing_table": {
+          "routes": [
+            {
+              "destination": "192.168.1.0/24",
+              "next_hop": "192.168.1.1",
+              "interface": "eth0",
+              "metric": 1,
+              "protocol": "connected"
+            },
+            {
+              "destination": "10.0.0.0/24",
+              "next_hop": "10.0.0.1", 
+              "interface": "eth1",
+              "metric": 1,
+              "protocol": "connected"
+            },
+            {
+              "destination": "172.16.0.0/16",
+              "next_hop": "10.0.0.2",
+              "interface": "eth1",
+              "metric": 2,
+              "protocol": "static"
+            }
+          ],
+          "default_route": {
+            "destination": "0.0.0.0/0",
+            "next_hop": "10.0.0.254",
+            "interface": "eth1",
+            "metric": 1,
+            "protocol": "static"
+          }
+        }
+      },
+      {
+        "name": "Router-2",
+        "type": "router", 
+        "status": "online",
+        "interfaces": [
+          {
+            "name": "eth0",
+            "status": "up",
+            "ipAddress": "10.0.0.2",
+            "macAddress": "00:11:22:33:44:03"
+          },
+          {
+            "name": "eth1",
+            "status": "up", 
+            "ipAddress": "172.16.1.1",
+            "macAddress": "00:11:22:33:44:04"
+          }
+        ],
+        "routing_table": {
+          "routes": [
+            {
+              "destination": "10.0.0.0/24",
+              "next_hop": "10.0.0.2",
+              "interface": "eth0",
+              "metric": 1,
+              "protocol": "connected"
+            },
+            {
+              "destination": "172.16.1.0/24",
+              "next_hop": "172.16.1.1",
+              "interface": "eth1", 
+              "metric": 1,
+              "protocol": "connected"
+            },
+            {
+              "destination": "192.168.1.0/24",
+              "next_hop": "10.0.0.1",
+              "interface": "eth0",
+              "metric": 2,
+              "protocol": "static"
+            }
+          ],
+          "default_route": {
+            "destination": "0.0.0.0/0",
+            "next_hop": "172.16.1.254",
+            "interface": "eth1",
+            "metric": 1,
+            "protocol": "static"
+          }
+        }
+      },
+      {
+        "name": "Switch-1",
+        "type": "switch",
+        "status": "online", 
+        "interfaces": [
+          {
+            "name": "fa0/1",
+            "status": "up",
+            "ipAddress": "192.168.1.10",
+            "macAddress": "00:11:22:33:44:05"
+          },
+          {
+            "name": "fa0/2",
+            "status": "up",
+            "ipAddress": "192.168.1.11", 
+            "macAddress": "00:11:22:33:44:06"
+          }
+        ]
+      },
+      {
+        "name": "PC-1",
+        "type": "host",
+        "status": "online",
+        "interfaces": [
+          {
+            "name": "eth0",
+            "status": "up",
+            "ipAddress": "192.168.1.100",
+            "macAddress": "00:11:22:33:44:07"
+          }
+        ]
+      },
+      {
+        "name": "PC-2", 
+        "type": "host",
+        "status": "online",
+        "interfaces": [
+          {
+            "name": "eth0",
+            "status": "up",
+            "ipAddress": "172.16.1.100",
+            "macAddress": "00:11:22:33:44:08"
+          }
+        ]
+      }
+    ],
+    "connections": [
+      {
+        "device1": "Router-1",
+        "interface1": "eth0",
+        "device2": "Switch-1", 
+        "interface2": "fa0/1"
+      },
+      {
+        "device1": "Switch-1",
+        "interface1": "fa0/2", 
+        "device2": "PC-1",
+        "interface2": "eth0"
+      },
+      {
+        "device1": "Router-1",
+        "interface1": "eth1",
+        "device2": "Router-2",
+        "interface2": "eth0"
+      },
+      {
+        "device1": "Router-2",
+        "interface1": "eth1",
+        "device2": "PC-2",
+        "interface2": "eth0"
+      }
+    ]
+  }
+} 
